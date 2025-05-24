@@ -965,6 +965,39 @@ def package_qa_check_rdepends(pkg, pkgdest, skip, taskdeps, packages, d):
                     oe.qa.handle_error("file-rdeps", error_msg, d)
 package_qa_check_rdepends[vardepsexclude] = "OVERRIDES"
 
+def __get_matchhing_libs_in_recipe_sysroot_dir(raw_lib_name, d):
+    import re
+
+    #Get the RECIPE_SYSROOT directory path
+    recipe_sysroot_dir = d.getVar('RECIPE_SYSROOT')
+
+    #Get all subdirectories in RECIPE_SYSROOT
+    sysroot_search_dirs = [sub_dir[0] for sub_dir in os.walk(recipe_sysroot_dir)]
+
+    #To be selected, the lib must match the pattern <lib_name>.so or <lib_name>.a
+    lib_matching_pattern = re.compile(r"\b%s\.(so|a)$" % raw_lib_name)
+
+    matched_lib_files = {}
+
+    for sysroot_search_dir in sysroot_search_dirs:
+
+        #Get the list of all lib files in the directory being searched
+        lib_files = os.listdir(sysroot_search_dir)
+
+        #Filter out matched lib files and add them to the matched_lib_files
+        for lib_file in lib_files:
+
+            #Check for lib files that ends in .so or .a
+            if lib_matching_pattern.fullmatch(lib_file):
+                #Add the file to the matched_lib_files, along with its path
+                matched_lib_files[lib_file] = os.path.join(sysroot_search_dir, lib_file)
+
+            else:
+                #Do nothing
+                pass
+
+    return matched_lib_files
+
 def __get_linked_libs_name(d):
     import re
     
