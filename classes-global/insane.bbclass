@@ -965,6 +965,88 @@ def package_qa_check_rdepends(pkg, pkgdest, skip, taskdeps, packages, d):
                     oe.qa.handle_error("file-rdeps", error_msg, d)
 package_qa_check_rdepends[vardepsexclude] = "OVERRIDES"
 
+def __get_packages_provide_the_linked_libs(linked_libs, d):
+    #Check for the package which provides the lib with .list files in SHLIBSDIRS
+    shlibs_dir = d.getVar('SHLIBSDIRS')
+    list_files = os.listdir(shlibs_dir)
+
+    linked_packages = {}
+
+    #Add package name to the depend package list
+    #Add the linking attribute of the lib to the recently added package name in depend package list
+
+    #Loop through each file in shlibs_dir
+    for list_file in list_files:
+
+        isPackageLinked = False
+
+        detected_linked_libs = {}
+
+        #Get path of the list file
+        list_file_path = os.path.join(shlibs_dir, list_file)
+
+        #Get the package name without .list extension
+        package_name = list_file.split('.')[0]
+
+        #Open the corresponding .list file
+        if os.access(list_file_path, os.R_OK):
+            with open(list_file_path, 'r') as list_file_fd:
+                list_file_lines = list_file_fd.readlines()
+        else:
+            bb.error("Log file cannot be read: %s" % log_path)
+
+        
+        #Check if any linked lib is in the opened file
+        for line in list_file_lines:
+            #Extract info from line for ease of processing
+            splitted_line = line.split(':')
+            shared_lib_name = splitted_line[0]
+            shared_lib_path = splitted_line[1]
+            shared_lib_version = splitted_line[2]
+
+            #Check if any linked lib matches the shared lib name
+            for linked_lib in linked_libs.items():
+                linked_lib_name = linked_lib[0]
+                linked_lib_attributes = linked_lib[1]
+
+                if linked_lib_name in shared_lib_name:
+                    #Add the lib to detected linked libs
+                    detected_linked_libs[linked_lib_name] = linked_lib_attributes
+
+                    #Set flag that this package does provide the linked lib
+                    isPackageLinked = True
+
+                else:
+                    #Do nothing
+                    pass
+        
+        if isPackageLinked:
+            package_attributes = {
+                "linked_libs": detected_linked_libs,
+                "list_file": list_file,
+                "list_file_path": list_file_path
+            }
+
+            #Add the attributes to the linked packages
+            linked_packages[package_name] = package_attributes
+        else:
+            #Do nothing
+            pass
+    
+    #With each package in depend package list
+            #Check for file with the same package name in WORKDIR_PKGDATA/runtime
+                #Add the license
+                #Add the linking attribute
+                #Add the depends attribute based on RDEPENDS
+
+                #With each package in depends attribute
+                    #Check for the file with the same name in WORKDIR_PKGDATA/runtime
+                        #Add the license
+                        #Add the linking attribute
+                        #Add the depends attribute based on RDEPENDS
+
+    return linked_packages
+
 def is_static_linking_flag_found(d):
     import re
 
@@ -1088,6 +1170,8 @@ def package_qa_check_license_compliance(packages, pkgfiles, d):
     m_pkgfiles = pkgfiles
     m_datastore = d
 
+    m_linked_packages = None
+
     #Check if a recipe whether generates executables, shared libs, static libs or all
     (is_executables_generated, is_shared_libs_generated, is_static_libs_generated ) = __check_type_of_files_generated(m_pkgfiles, m_datastore)
 
@@ -1171,22 +1255,8 @@ def package_qa_check_license_compliance(packages, pkgfiles, d):
                 bb.error("There are more than 2 lib files matching the %s " % raw_linked_lib_name)
         
 
-        #With each lib in linked libs
-            #Check for the package which provides the lib with .list files in SHLIBSDIRS
-                #Add the package name to the depend package list
-                #Add the linking attribute of the lib to the recently added package name in depend package list
-        
-        #With each package in depend package list
-            #Check for file with the same package name in WORKDIR_PKGDATA/runtime
-                #Add the license
-                #Add the linking attribute
-                #Add the depends attribute based on RDEPENDS
-
-                #With each package in depends attribute
-                    #Check for the file with the same name in WORKDIR_PKGDATA/runtime
-                        #Add the license
-                        #Add the linking attribute
-                        #Add the depends attribute based on RDEPENDS
+        #Get a list of packages which provides the linked libs
+        m_linked_packages = __get_packages_provide_the_linked_libs(linked_libs=linked_libs, d=m_datastore) #TODO: Please be noted, this method is currently can only work with packages which provide shared libs .so files
         
         #Apply the FOSS license check algorithm on the depend package list
 
