@@ -965,6 +965,29 @@ def package_qa_check_rdepends(pkg, pkgdest, skip, taskdeps, packages, d):
                     oe.qa.handle_error("file-rdeps", error_msg, d)
 package_qa_check_rdepends[vardepsexclude] = "OVERRIDES"
 
+def is_static_linking_flag_found(d):
+    import re
+
+    is_static_flag_found = False
+
+    recipe_log_dir = d.getVar('T')
+    log_path = os.path.join(recipe_log_dir, 'log.do_compile')
+
+    #Read log file from T/log.do_compile into a list of lines
+    if os.access(log_path, os.R_OK):
+        with open(log_path, 'r') as log_fd:
+            log_content = log_fd.read()
+    else:
+        bb.error("Log file cannot be read: %s" % log_path)
+    
+    #TODO: This is compiler and linker specific, might need to be updated these flags accordingly in the future
+    #Apply regex to check for -static linking flag 
+    static_flag_checker = re.compile(r"-static")
+
+    is_static_flag_found = bool(static_flag_checker.search(log_content))
+    
+    return is_static_flag_found
+
 def __get_matchhing_libs_in_recipe_sysroot_dir(raw_lib_name, d):
     import re
 
