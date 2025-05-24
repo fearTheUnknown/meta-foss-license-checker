@@ -1389,9 +1389,6 @@ def package_qa_check_missing_update_alternatives(pn, d, messages):
 python do_package_qa () {
     import subprocess
     import oe.packagedata
-    # import debugpy
-    # debugpy.listen(5678)
-    # debugpy.wait_for_client()
     
     bb.note("DO PACKAGE QA")
 
@@ -1488,7 +1485,6 @@ python do_package_qa () {
     if 'libdir' in d.getVar("ALL_QA").split():
         package_qa_check_libdir(d)
     
-    # debugpy.breakpoint()
     package_qa_check_license_compliance(packages=packages, pkgfiles=pkgfiles, d=d)
 
     oe.qa.exit_if_errors(d)
