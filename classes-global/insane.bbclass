@@ -972,9 +972,6 @@ def __get_packages_provide_the_linked_libs(linked_libs, d):
 
     linked_packages = {}
 
-    #Add package name to the depend package list
-    #Add the linking attribute of the lib to the recently added package name in depend package list
-
     #Loop through each file in shlibs_dir
     for list_file in list_files:
 
