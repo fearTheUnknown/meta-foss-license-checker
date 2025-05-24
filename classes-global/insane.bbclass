@@ -1064,7 +1064,7 @@ def is_static_linking_flag_found(d):
     
     #TODO: This is compiler and linker specific, might need to be updated these flags accordingly in the future
     #Apply regex to check for -static linking flag 
-    static_flag_checker = re.compile(r"-static")
+    static_flag_checker = re.compile(r"\s-static\s")
 
     is_static_flag_found = bool(static_flag_checker.search(log_content))
     
@@ -1202,7 +1202,7 @@ def package_qa_check_license_compliance(packages, pkgfiles, d):
                 
 
                 #Check if compile log has pattern flag -static or .so is not a symbolic link
-                if is_static_linking_flag_found(d=m_datastore) or not os.path.islink(matched_shared_lib_file[1]):
+                if is_static_linking_flag_found(d=m_datastore): #TODO: Be careful of libc.so since it is a ld to link both static and dynamic libs, might need to have a unique check for this later
                     static_lib_file = matched_static_lib_file[0]
                     static_lib_file_path = matched_static_lib_file[1]
 
