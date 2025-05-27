@@ -965,6 +965,60 @@ def package_qa_check_rdepends(pkg, pkgdest, skip, taskdeps, packages, d):
                     oe.qa.handle_error("file-rdeps", error_msg, d)
 package_qa_check_rdepends[vardepsexclude] = "OVERRIDES"
 
+def __recursively_add_dependent_packages(linked_package, linked_packages,d):
+    workdir_pkgdata_dir = d.getVar('WORKDIR_PKGDATA')
+    runtime_dir = workdir_pkgdata_dir + '/runtime'
+
+    #Check for file with the same package name in WORKDIR_PKGDATA/runtime
+    package_file_path = os.path.join(runtime_dir, linked_package)
+    
+    #Open the corresponding package file
+    if os.access(package_file_path, os.R_OK):
+        with open(package_file_path, 'r') as package_file_fd:
+            package_file_lines = package_file_fd.readlines()
+    else:
+        bb.error("Package file cannot be read: %s" % package_file_path)
+    
+    linked_packages[linked_package]['depends_on_packages']= []
+    linked_packages[linked_package]['rdepend_libs'] = []
+        
+    for line in package_file_lines:
+        #Add the license
+        if 'LICENSE' == line.split(':')[0]:
+            license_name = line.split(':')[1]
+            linked_packages[linked_package]['license'] = license_name
+            
+        #Add the depends attribute based on RDEPENDS of the package file
+        if 'RDEPENDS' == line.split(':')[0]:
+            rdepend_packages = line.split(':')[2]
+            linked_packages[linked_package]['depends_on_packages'] = bb.utils.explode_deps(rdepend_packages)
+        
+        #Add the corresponding shared libs in use
+        #TODO: these files should be put in linked_libs of the depended packages for ease of processing, might take this into account later
+        if 'FILERDEPENDS' == line.split(':')[0]:
+            #Check if 'depends_on_packages' is not empty
+            if linked_packages[linked_package]['depends_on_packages'] != []:
+                #Check if one of the linked libs is in the line
+                for linked_lib in linked_packages[linked_package]['linked_libs'].keys():
+
+                    linked_lib_name = linked_lib.split('.')[0]
+                    package_lib_file_depends_on_others = line.split(':')[1].replace('@underscore@', '_') #The character '_' is denoted as '@underscore@' in some package file
+
+                    if linked_lib_name in package_lib_file_depends_on_others:
+                        #Extract runtime depend libs as a list
+                        rdepends_files_raw = line.split(':')[3]
+                        rdepends_files = explode_libs(rdepends_files_raw)
+
+                        #Append libs to "rdepend_libs" of the corresponding package
+                        linked_packages[linked_package]['rdepend_libs'].append(rdepends_files)
+                    else:
+                        #Do nothing
+                        pass
+                
+            else:
+                #Do nothing, this is the end package in the dependency chain
+                pass
+
 def __get_packages_provide_the_linked_libs(linked_libs, d):
     #Check for the package which provides the lib with .list files in SHLIBSDIRS
     shlibs_dir = d.getVar('SHLIBSDIRS')
@@ -1030,17 +1084,9 @@ def __get_packages_provide_the_linked_libs(linked_libs, d):
             #Do nothing
             pass
     
-    #With each package in depend package list
-            #Check for file with the same package name in WORKDIR_PKGDATA/runtime
-                #Add the license
-                #Add the linking attribute
-                #Add the depends attribute based on RDEPENDS
-
-                #With each package in depends attribute
-                    #Check for the file with the same name in WORKDIR_PKGDATA/runtime
-                        #Add the license
-                        #Add the linking attribute
-                        #Add the depends attribute based on RDEPENDS
+    #With each package in the linked packages, recursively add the dependent packages and their libs
+    for linked_package in linked_packages.keys():
+        __recursively_add_dependent_packages(linked_package=linked_package, linked_packages=linked_packages, d=d)
 
     return linked_packages
 
