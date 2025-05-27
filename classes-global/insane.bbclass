@@ -965,6 +965,23 @@ def package_qa_check_rdepends(pkg, pkgdest, skip, taskdeps, packages, d):
                     oe.qa.handle_error("file-rdeps", error_msg, d)
 package_qa_check_rdepends[vardepsexclude] = "OVERRIDES"
 
+def explode_libs(s):
+
+    lib_list = s.split()
+
+    def remove_parentheses(s):
+        while '(' in s and ')' in s:
+            start = s.find('(')
+            end = s.find(')', start)
+            if end == -1:
+                break
+            s = s[:start] + s[end+1:]
+        return s
+    
+    return_list = [remove_parentheses(lib) for lib in lib_list]
+
+    return return_list
+
 def __recursively_add_dependent_packages(linked_package, linked_packages,d):
     workdir_pkgdata_dir = d.getVar('WORKDIR_PKGDATA')
     runtime_dir = workdir_pkgdata_dir + '/runtime'
