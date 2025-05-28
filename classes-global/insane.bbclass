@@ -1319,9 +1319,6 @@ def package_qa_check_license_compliance(packages, pkgfiles, d):
         #A list of linked libs with their attributes for ease of futher processing
         linked_libs = {}
 
-        #A list of packages which provides the linked libs along with other useful attributes
-        linked_packages = {}
-
         #With each name in the raw linked libs
         for raw_linked_lib_name in raw_linked_lib_names:
             #Check for the matching lib files in RECIPE_SYSROOT/usr/lib
