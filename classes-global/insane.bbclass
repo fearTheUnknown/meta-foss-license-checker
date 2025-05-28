@@ -1103,8 +1103,12 @@ def __recursively_add_dependent_packages(linked_package, linked_packages,d):
                         #Do nothing
                         pass
                 
+                #Go down the dependency chain in depends_on_packages
+                for rdepend_package in linked_packages[linked_package]['depends_on_packages'].keys():
+                    __recursively_add_dependent_packages(linked_package=rdepend_package, linked_packages=linked_packages[linked_package]['depends_on_packages'], d=d)
+                
             else:
-                #Do nothing, this is the end package in the dependency chain
+                #Do nothing, this is the end package in the dependency chain. This also the base condition for the recursion to stop
                 pass
 
 def __get_packages_provide_the_linked_libs(linked_libs, d):
