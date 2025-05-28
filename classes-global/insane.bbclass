@@ -1014,7 +1014,7 @@ def __recursively_add_dependent_packages(linked_package, linked_packages,d):
                 license_name = line.split(':')[2]
 
             elif len(splitted_license_entry) == 2:
-            license_name = line.split(':')[1]
+                license_name = line.split(':')[1]
 
             else:
                 bb.error("Undefined LICENSE entry format in package file: %s" % package_file_path)
