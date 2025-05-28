@@ -1000,12 +1000,26 @@ def __recursively_add_dependent_packages(linked_package, linked_packages,d):
     
     #Create depends_on_packages attribue to indicate which packages the linked_package is depending on
     linked_packages[linked_package]['depends_on_packages']= {}
+
+    #Create list of license that the package must adhere to
+    linked_packages[linked_package]['license'] = []
         
     for line in package_file_lines:
         #Add the license
         if 'LICENSE' == line.split(':')[0]:
+#Check if the LICENSE contains 2 or 3 parts separated by ':'
+            splitted_license_entry = line.split(':')
+            if len(splitted_license_entry) == 3:
+                license_name = line.split(':')[2]
+
+            elif len(splitted_license_entry) == 2:
             license_name = line.split(':')[1]
-            linked_packages[linked_package]['license'] = license_name
+
+            else:
+                bb.error("Undefined LICENSE entry format in package file: %s" % package_file_path)
+
+            #Add the license name to the existing 'license' attribute
+            linked_packages[linked_package]['license'].append(license_name.strip())
             
         #Add the depends attribute based on RDEPENDS of the package file
         if 'RDEPENDS' == line.split(':')[0]:
