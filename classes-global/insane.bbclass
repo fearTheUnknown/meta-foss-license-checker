@@ -1007,8 +1007,9 @@ def __recursively_add_dependent_packages(linked_package, linked_packages,d):
     for line in package_file_lines:
         #Add the license
         if 'LICENSE' == line.split(':')[0]:
-#Check if the LICENSE contains 2 or 3 parts separated by ':'
             splitted_license_entry = line.split(':')
+            
+            #Check if the LICENSE contains 2 or 3 parts separated by ':'
             if len(splitted_license_entry) == 3:
                 license_name = line.split(':')[2]
 
@@ -1033,7 +1034,7 @@ def __recursively_add_dependent_packages(linked_package, linked_packages,d):
         
         #Add the corresponding shared libs in use
         if 'FILERDEPENDS' == line.split(':')[0]:
-            #Check if 'depends_on_packages' is not empty
+            #Check if 'depends_on_packages' is not empty, this means that there is at least one package under the dependency chain
             if linked_packages[linked_package]['depends_on_packages'] != {}:
                 for linked_lib in linked_packages[linked_package]['linked_libs'].keys():
 
