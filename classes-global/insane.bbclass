@@ -1319,9 +1319,6 @@ def package_qa_check_license_compliance(packages, pkgfiles, d):
         #A list of linked libs with their attributes for ease of futher processing
         linked_libs = {}
 
-        #A list of packages which provides the linked libs along with other useful attributes
-        linked_packages = {}
-
         #With each name in the raw linked libs
         for raw_linked_lib_name in raw_linked_lib_names:
             #Check for the matching lib files in RECIPE_SYSROOT/usr/lib
@@ -1398,8 +1395,85 @@ def package_qa_check_license_compliance(packages, pkgfiles, d):
 
     #If the package generates .so libraries in PKGDEST/PN-dev/usr/lib/
     if is_shared_libs_generated:
-        pass
-        #TODO: TBD later
+        #Extract the linked libs from the latest compile log
+        raw_linked_lib_names = __get_linked_libs_name(m_datastore)
+
+        #A list of linked libs with their attributes for ease of futher processing
+        linked_libs = {}
+
+        #With each name in the raw linked libs
+        for raw_linked_lib_name in raw_linked_lib_names:
+            #Check for the matching lib files in RECIPE_SYSROOT/usr/lib
+            matched_lib_files = __get_matchhing_libs_in_recipe_sysroot_dir(raw_lib_name=raw_linked_lib_name, d=m_datastore)
+
+            #If there are more than one lib file matching the same name of a linked lib
+            if len(matched_lib_files) == 2:
+                #Extract the each lib in the matched lib files
+                for matched_lib_file in matched_lib_files.items():
+                    if matched_lib_file[0].endswith('.so'):
+                        matched_shared_lib_file = matched_lib_file
+                    elif matched_lib_file[0].endswith('.a'):
+                        matched_static_lib_file = matched_lib_file
+                
+
+                #Check if compile log has pattern flag -static or .so is not a symbolic link
+                if is_static_linking_flag_found(d=m_datastore): #TODO: Be careful of libc.so since it is a ld script to link both static and dynamic libs, might need to have a unique check for this later
+                    static_lib_file = matched_static_lib_file[0]
+                    static_lib_file_path = matched_static_lib_file[1]
+
+                    #Set linking attribute of the lib to static
+                    lib_attributes = {
+                        "path": static_lib_file_path,
+                        "linking": "static"
+                    }
+
+                    #Add the .a lib into linked libs
+                    linked_libs[static_lib_file] = lib_attributes
+                    
+                
+                else:
+                    shared_lib_file = matched_shared_lib_file[0]
+                    shared_lib_file_path = matched_shared_lib_file[1]
+
+                    #Set linking attribute of the lib to dynamic
+                    lib_attributes = {
+                        "path": shared_lib_file_path,
+                        "linking": "dynamic"
+                    }
+
+                    #Add the .so lib into linked libs
+                    linked_libs[shared_lib_file] = lib_attributes
+
+            elif len(matched_lib_files) == 1:
+                #TODO: It is a little bit awkward to use a loop here since there is only one element in the dictionary, may find more elegant way to do this
+                for matched_lib_file in matched_lib_files.items():
+                    lib_name = matched_lib_file[0]
+                    lib_path = matched_lib_file[1]
+
+                #Set linking attribute to dynamic/static according ending .so/.a of the recently added lib
+                if lib_name.endswith('.so'):
+                    linking_status = "dynamic"
+                elif lib_name.endswith('.a'):
+                    linking_status = "static"
+                else:
+                    #Signal error
+                    bb.error("Currently this tool is just working for Linux, other libs from different OS platforms are not supported yet")
+                
+                #Add the lib .so/.a found into linked libs
+                lib_attributes = {
+                        "path": lib_path,
+                        "linking": linking_status
+                }
+                linked_libs[lib_name] = lib_attributes
+            else:
+                #Signal error, there must not be 3 libs matching the same name
+                bb.error("There are more than 2 lib files matching the %s " % raw_linked_lib_name)
+        
+
+        #Get a list of packages which provides the linked libs
+        m_linked_packages = __get_packages_provide_the_linked_libs(linked_libs=linked_libs, d=m_datastore) #TODO: Please be noted, this method is currently can only work with packages which provide shared libs .so files
+        
+        #Apply the FOSS license check algorithm on the depend package list
 
     #If the package generates .a libraries in PKGDEST/PN-staticdev/usr/lib/
     if is_static_libs_generated:
