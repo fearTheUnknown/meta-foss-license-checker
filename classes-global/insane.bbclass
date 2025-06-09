@@ -982,7 +982,7 @@ def explode_libs(s):
 
     return return_list
 
-def __recursively_add_dependent_packages(parent_package, linked_packages, common_packages, d):
+def __recursively_add_dependent_packages(parent_package=None, linked_packages={}, common_packages={}, d=None):
 
     shlibs_dir = d.getVar('SHLIBSDIRS')
     pkg_data_dir = d.getVar('PKGDATA_DIR')
@@ -991,17 +991,52 @@ def __recursively_add_dependent_packages(parent_package, linked_packages, common
 
         #Check if the linked package is not already created before
         if linked_package not in common_packages.keys():
+
+            #Create a list of file paths
+            package_file_paths = []
         
             #Check for file with the same package name in PKGDATA_DIR/runtime
             if os.path.exists(os.path.join(pkg_data_dir,'runtime',linked_package)):
-                package_file_path = os.path.join(pkg_data_dir,'runtime',linked_package)
-                    
+                #Get the found file path
+                found_file_path = os.path.join(pkg_data_dir,'runtime',linked_package)
+
+                #Add the found file path to list of file paths
+                package_file_paths.append(found_file_path)
+
+            #Check for if linked package is a directory which contains symbolic links
+            elif os.path.exists(os.path.join(pkg_data_dir,'runtime-rprovides',linked_package)):
+                #Get the package directory path
+                package_dir_path = os.path.join(pkg_data_dir,'runtime-rprovides',linked_package)
+
+                #Check for all items in the package directory
+                for file in os.listdir(package_dir_path):
+
+                    file_path = os.path.join(package_dir_path, file)
+
+                    #Check if the file path is a symbolic link
+                    if os.path.islink(file_path):
+                        #Add symbolic link path to the list of file paths
+                        package_file_paths.append(file_path)
+
+                    #Check if the item is a file
+                    elif os.path.isfile(file_path):
+
+                        #Add file path to the list of file paths
+                        package_file_paths.append(file_path)
+                    else:
+                        bb.warn("The following entity is not a file or symbolic link: %s" % file_path)
+                        bb.warn ("Package dependency tree may not be valid for linked package: %s" % linked_package)
+
+            else:
+                bb.fatal("Package file not found for linked package: %s" % linked_package)
+
+            for package_file_path in package_file_paths:
                 #Open the corresponding package file
                 if os.access(package_file_path, os.R_OK):
                     with open(package_file_path, 'r') as package_file_fd:
                         package_file_lines = package_file_fd.readlines()
                 else:
-                    bb.error("Package file cannot be read: %s" % package_file_path)
+                    bb.fatal("Package file cannot be read: %s" % package_file_path)
                 
                 #Create all attributes of the package
                 linked_packages[linked_package]['depends_on_packages']= {}
@@ -1112,8 +1147,6 @@ def __recursively_add_dependent_packages(parent_package, linked_packages, common
                     #Do nothing, this linked package does not depend on any other packages
                     pass
 
-            else:
-                bb.error("Package file not found for linked package: %s" % linked_package)
         else:
             #Do nothing, the linked package is already created before
             bb.note("Setting reference to package [%s] since it is created before" % linked_package)
@@ -1268,8 +1301,7 @@ def package_qa_check_license_compliance(pkgs, pkgfiles, d):
                     pass
     
     #Get the dependency tree of the linked packages
-    common_packages = {}
-    __recursively_add_dependent_packages(parent_package=None, linked_packages=linked_packages, common_packages = common_packages, d=d)
+    __recursively_add_dependent_packages(parent_package=None, linked_packages=linked_packages, common_packages = {}, d=d)
 
     #Apply the FOSS license check algorithm on the linked packages
         
