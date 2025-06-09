@@ -982,206 +982,177 @@ def explode_libs(s):
 
     return return_list
 
-def __recursively_add_dependent_packages(linked_package, linked_packages,d):
+def __recursively_add_dependent_packages(parent_package=None, linked_packages={}, common_packages={}, d=None):
 
     shlibs_dir = d.getVar('SHLIBSDIRS')
-    workdir_pkgdata_dir = d.getVar('WORKDIR_PKGDATA')
-    runtime_dir = workdir_pkgdata_dir + '/runtime'
+    pkg_data_dir = d.getVar('PKGDATA_DIR')
 
-    #Check for file with the same package name in WORKDIR_PKGDATA/runtime
-    package_file_path = os.path.join(runtime_dir, linked_package)
-    
-    #Open the corresponding package file
-    if os.access(package_file_path, os.R_OK):
-        with open(package_file_path, 'r') as package_file_fd:
-            package_file_lines = package_file_fd.readlines()
-    else:
-        bb.error("Package file cannot be read: %s" % package_file_path)
-    
-    #Create depends_on_packages attribue to indicate which packages the linked_package is depending on
-    linked_packages[linked_package]['depends_on_packages']= {}
-
-    #Create list of license that the package must adhere to
-    linked_packages[linked_package]['license'] = []
-        
-    for line in package_file_lines:
-        #Add the license
-        if 'LICENSE' == line.split(':')[0]:
-            splitted_license_entry = line.split(':')
-            
-            #Check if the LICENSE contains 2 or 3 parts separated by ':'
-            if len(splitted_license_entry) == 3:
-                license_name = line.split(':')[2]
-
-            elif len(splitted_license_entry) == 2:
-                license_name = line.split(':')[1]
-
-            else:
-                bb.error("Undefined LICENSE entry format in package file: %s" % package_file_path)
-
-            #Add the license name to the existing 'license' attribute
-            linked_packages[linked_package]['license'].append(license_name.strip())
-            
-        #Add the depends attribute based on RDEPENDS of the package file
-        if 'RDEPENDS' == line.split(':')[0]:
-            #Get list of dependent packages
-            rdepend_packages_raw = line.split(':')[2]
-            rdepend_packages = bb.utils.explode_deps(rdepend_packages_raw)
-
-            #With each package in the rdepend_packages, add it as an empty dictionary to the depends_on_packages attribute of linked_packages
-            for rdepend_package in rdepend_packages:
-                linked_packages[linked_package]['depends_on_packages'][rdepend_package] = {}
-        
-        #Add the corresponding shared libs in use
-        if 'FILERDEPENDS' == line.split(':')[0]:
-            #Check if 'depends_on_packages' is not empty, this means that there is at least one package under the dependency chain
-            if linked_packages[linked_package]['depends_on_packages'] != {}:
-                for linked_lib in linked_packages[linked_package]['linked_libs'].keys():
-
-                    linked_lib_name = linked_lib.split('.')[0]
-                    lib_file_of_current_package_which_depends_on_other_libs_from_other_dependent_packages = line.split(':')[1].replace('@underscore@', '_') #The character '_' is denoted as '@underscore@' in some package file
-
-                    #Check if one of the linked libs of the linked_package is in the current FILERDEPENDS line which reveals a list of its dependency files
-                    if linked_lib_name in lib_file_of_current_package_which_depends_on_other_libs_from_other_dependent_packages:
-                        #Extract runtime depend libs as a list
-                        rdepends_files_raw = line.split(':')[3]
-                        rdepends_files_original = explode_libs(rdepends_files_raw)
-
-                        #Remove duplication in the rdepends_files
-                        rdepends_files = list(set(rdepends_files_original))
-
-                        #Check which package in the RDEPENDS provides the rdepends_files
-                        for rdepend_package in linked_packages[linked_package]['depends_on_packages'].keys():
-                            list_file_path = os.path.join(shlibs_dir, rdepend_package + '.list')
-
-                            linked_packages[linked_package]['depends_on_packages'][rdepend_package]['linked_libs'] = {}
-
-                            #Open corresponding .list file in SHLIBSDIRS
-                            if os.access(list_file_path, os.R_OK):
-                                with open(list_file_path, 'r') as list_file_fd:
-                                    list_file_log = list_file_fd.read()
-                            else:
-                                bb.error("List file cannot be read: %s" % list_file_path)
-
-                            #Check if any rdepends_file is in the opened file
-                            for rdepends_file in rdepends_files:
-                                if rdepends_file in list_file_log:
-
-                                    #Check for .so,.a extension of the linked libs to set the linking status accordingly
-                                    if '.so' in rdepends_file:
-                                        #Add the shared linked lib along with its linking status
-                                        linked_lib = rdepends_file.split('.')[0] + '.so'
-                                        linked_packages[linked_package]['depends_on_packages'][rdepend_package]['linked_libs'][linked_lib] = {}
-                                        linked_packages[linked_package]['depends_on_packages'][rdepend_package]['linked_libs'][linked_lib]['linking_status'] = 'dynamic'
-
-                                        #Add path to the linked_lib
-                                        raw_lib_name = linked_lib.split('.')[0]
-                                        found_libs = __get_matchhing_libs_in_recipe_sysroot_dir(raw_lib_name, d)
-                                        lib_path = found_libs[linked_lib]
-                                        linked_packages[linked_package]['depends_on_packages'][rdepend_package]['linked_libs'][linked_lib]['path'] = lib_path
-
-                                    elif rdepends_file.endswith('.a'):
-                                        #Add the static linked lib along with its linking status
-                                        linked_lib = rdepends_file
-                                        linked_packages[linked_package]['depends_on_packages'][rdepend_package]['linked_libs'][linked_lib] = {}
-                                        linked_packages[linked_package]['depends_on_packages'][rdepend_package]['linked_libs'][linked_lib]['linking_status'] = 'static'
-
-                                        #Add path to the linked_lib
-                                        raw_lib_name = linked_lib.split('.')[0]
-                                        found_libs = __get_matchhing_libs_in_recipe_sysroot_dir(raw_lib_name, d)
-                                        lib_path = found_libs[linked_lib]
-                                        linked_packages[linked_package]['depends_on_packages'][rdepend_package]['linked_libs'][linked_lib]['path'] = lib_path
-
-                                    else:
-                                        linked_packages[linked_package]['depends_on_packages'][rdepend_package]['linked_libs'][rdepends_file] = {}
-                                        linked_packages[linked_package]['depends_on_packages'][rdepend_package]['linked_libs'][rdepends_file]['linking_status'] = 'unknown'
-                                        linked_packages[linked_package]['depends_on_packages'][rdepend_package]['linked_libs'][rdepends_file]['path'] = ''
-
-                                else:
-                                    #Do nothing, the rdepends_file is not provided by the package
-                                    pass
-                    else:
-                        #Do nothing
-                        pass
-                
-                #Go down the dependency chain in depends_on_packages
-                for rdepend_package in linked_packages[linked_package]['depends_on_packages'].keys():
-                    __recursively_add_dependent_packages(linked_package=rdepend_package, linked_packages=linked_packages[linked_package]['depends_on_packages'], d=d)
-                
-            else:
-                #Do nothing, this is the end package in the dependency chain. This also the base condition for the recursion to stop
-                pass
-
-def __get_packages_provide_the_linked_libs(linked_libs, d):
-    #Check for the package which provides the lib with .list files in SHLIBSDIRS
-    shlibs_dir = d.getVar('SHLIBSDIRS')
-    list_files = os.listdir(shlibs_dir)
-
-    linked_packages = {}
-
-    #Loop through each file in shlibs_dir
-    for list_file in list_files:
-
-        isPackageLinked = False
-
-        detected_linked_libs = {}
-
-        #Get path of the list file
-        list_file_path = os.path.join(shlibs_dir, list_file)
-
-        #Get the package name without .list extension
-        package_name = list_file.split('.')[0]
-
-        #Open the corresponding .list file
-        if os.access(list_file_path, os.R_OK):
-            with open(list_file_path, 'r') as list_file_fd:
-                list_file_lines = list_file_fd.readlines()
-        else:
-            bb.error("Log file cannot be read: %s" % log_path)
-
-        
-        #Check if any linked lib is in the opened file
-        for line in list_file_lines:
-            #Extract info from line for ease of processing
-            splitted_line = line.split(':')
-            shared_lib_name = splitted_line[0]
-            shared_lib_path = splitted_line[1]
-            shared_lib_version = splitted_line[2]
-
-            #Check if any linked lib matches the shared lib name
-            for linked_lib in linked_libs.items():
-                linked_lib_name = linked_lib[0]
-                linked_lib_attributes = linked_lib[1]
-
-                if linked_lib_name in shared_lib_name:
-                    #Add the lib to detected linked libs
-                    detected_linked_libs[linked_lib_name] = linked_lib_attributes
-
-                    #Set flag that this package does provide the linked lib
-                    isPackageLinked = True
-
-                else:
-                    #Do nothing
-                    pass
-        
-        if isPackageLinked:
-            package_attributes = {
-                "linked_libs": detected_linked_libs,
-                "list_file": list_file,
-                "list_file_path": list_file_path
-            }
-
-            #Add the attributes to the linked packages
-            linked_packages[package_name] = package_attributes
-        else:
-            #Do nothing
-            pass
-    
-    #With each package in the linked packages, recursively add the dependent packages and their libs
     for linked_package in linked_packages.keys():
-        __recursively_add_dependent_packages(linked_package=linked_package, linked_packages=linked_packages, d=d)
 
-    return linked_packages
+        #Check if the linked package is not already created before
+        if linked_package not in common_packages.keys():
+
+            #Create a list of file paths
+            package_file_paths = []
+        
+            #Check for file with the same package name in PKGDATA_DIR/runtime
+            if os.path.exists(os.path.join(pkg_data_dir,'runtime',linked_package)):
+                #Get the found file path
+                found_file_path = os.path.join(pkg_data_dir,'runtime',linked_package)
+
+                #Add the found file path to list of file paths
+                package_file_paths.append(found_file_path)
+
+            #Check for if linked package is a directory which contains symbolic links
+            elif os.path.exists(os.path.join(pkg_data_dir,'runtime-rprovides',linked_package)):
+                #Get the package directory path
+                package_dir_path = os.path.join(pkg_data_dir,'runtime-rprovides',linked_package)
+
+                #Check for all items in the package directory
+                for file in os.listdir(package_dir_path):
+
+                    file_path = os.path.join(package_dir_path, file)
+
+                    #Check if the file path is a symbolic link
+                    if os.path.islink(file_path):
+                        #Add symbolic link path to the list of file paths
+                        package_file_paths.append(file_path)
+
+                    #Check if the item is a file
+                    elif os.path.isfile(file_path):
+
+                        #Add file path to the list of file paths
+                        package_file_paths.append(file_path)
+                    else:
+                        bb.warn("The following entity is not a file or symbolic link: %s" % file_path)
+                        bb.warn ("Package dependency tree may not be valid for linked package: %s" % linked_package)
+
+            else:
+                bb.fatal("Package file not found for linked package: %s" % linked_package)
+
+            for package_file_path in package_file_paths:
+                #Open the corresponding package file
+                if os.access(package_file_path, os.R_OK):
+                    with open(package_file_path, 'r') as package_file_fd:
+                        package_file_lines = package_file_fd.readlines()
+                else:
+                    bb.fatal("Package file cannot be read: %s" % package_file_path)
+                
+                #Create all attributes of the package
+                linked_packages[linked_package]['depends_on_packages']= {}
+                linked_packages[linked_package]['license'] = []
+                linked_packages[linked_package]['linked_libs'] = {}
+                linked_packages[linked_package]['name'] = linked_package
+
+                #Create all extracted attributes
+                extracted_licenses = []
+                extracted_rdepends = []
+                extracted_linked_libs = []
+                extracted_provided_libs = []
+
+                for line in package_file_lines:
+                    #Add the license
+                    if 'LICENSE' == line.split(':')[0]:
+                        splitted_license_entry = line.split(':')
+                        
+                        #Check if the LICENSE contains 2 or 3 parts separated by ':'
+                        if len(splitted_license_entry) == 3:
+                            license_name = line.split(':')[2]
+
+                        elif len(splitted_license_entry) == 2:
+                            license_name = line.split(':')[1]
+
+                        else:
+                            bb.error("Undefined LICENSE entry format in package file: %s" % package_file_path)
+                        
+                        #Add the license name to the extracted license list
+                        extracted_licenses.append(license_name.strip())
+                    
+                    #Add the depends attribute based on RDEPENDS of the package file
+                    elif 'RDEPENDS' == line.split(':')[0]:
+                        #Get list of dependent packages
+                        rdepend_packages_raw = line.split(':')[2]
+                        rdepend_packages = bb.utils.explode_deps(rdepend_packages_raw)
+
+                        #Set list of dependent packages to its corresponding extracted attribute
+                        extracted_rdepends = rdepend_packages
+                    
+                    #Add all shared libs which the current package is depending on
+                    elif 'FILERDEPENDS' == line.split(':')[0]:
+                        #Record all of linked libs
+                        raw_linked_libs = line.split(':')[3]
+                        list_of_linked_libs_without_version_info = explode_libs(raw_linked_libs)
+                        extracted_linked_libs.extend(list_of_linked_libs_without_version_info)
+                    
+                    #Add all provided libs which the current package is providing
+                    elif 'FILERPROVIDESFLIST' == line.split(':')[0]:
+                        #Record all of provided libs
+                        raw_provided_libs = line.split(':')[2]
+                        list_of_provided_lib_paths = raw_provided_libs.split()
+                        extracted_provided_libs = [os.path.basename(provided_lib_path) for provided_lib_path in list_of_provided_lib_paths]
+                
+                #Add the extracted licenses to the existing 'license' attribute
+                linked_packages[linked_package]['license'] = extracted_licenses
+
+                #With each dependent package in the extracted dependent packages, create an empty dictionary with package name as the key
+                for rdepend_package in extracted_rdepends:
+                    linked_packages[linked_package]['depends_on_packages'][rdepend_package] = {}
+                
+                #With each linked lib in the extracted linked libs, create an dictionary with linked lib name as the key
+                non_duplicate_extracted_linked_libs = list(set(extracted_linked_libs))
+                for linked_lib in non_duplicate_extracted_linked_libs:
+
+                    linked_packages[linked_package]['linked_libs'][linked_lib] = {}
+
+                    #Add linking status
+                    if len(linked_lib.split('.')) > 1:
+                        lib_extension = linked_lib.split('.')[1]
+                        if lib_extension == 'so':
+                            linked_packages[linked_package]['linked_libs'][linked_lib]['linking_status'] = 'dynamic'
+                        elif lib_extension == 'a':
+                            linked_packages[linked_package]['linked_libs'][linked_lib]['linking_status'] = 'static'
+                        else:
+                            linked_packages[linked_package]['linked_libs'][linked_lib]['linking_status'] = 'unknown'
+                    else:
+                        linked_packages[linked_package]['linked_libs'][linked_lib]['linking_status'] = 'unknown'
+
+                    #TODO: Add path to the lib file
+                
+                if parent_package is not None:
+                    #Check which linked lib of the parent package is provided by the current package
+                    parent_package_linked_libs = parent_package['linked_libs'].keys()
+
+                    for parent_linked_lib in parent_package_linked_libs:
+                        for extracted_provided_lib in extracted_provided_libs:
+                            #IF the parent linked lib is provided by the current package
+                            if parent_linked_lib in extracted_provided_lib:
+                                #Set reference of the parent linked lib to the current package
+                                parent_package['linked_libs'][parent_linked_lib]['provided_by'] = {}
+                                parent_package['linked_libs'][parent_linked_lib]['provided_by'][linked_package] = linked_packages[linked_package]
+                            else:
+                                #Do nothing, the current package does not provide the corresponding parent linked lib
+                                pass
+                
+                #Update the created package into common packages
+                common_packages[linked_package] = linked_packages[linked_package]
+
+                extracted_rdepends_str = ' '.join(extracted_rdepends)
+                bb.note("Package [%s] depends on packages [%s]" % (linked_package, extracted_rdepends_str))
+
+                #Check to decide whether to recursively add dependent packages deep down in the dependency tree
+                if linked_packages[linked_package]['depends_on_packages'] != {}:
+                    #Go down the dependency tree with each dependent package
+                    __recursively_add_dependent_packages(parent_package=linked_packages[linked_package], linked_packages=linked_packages[linked_package]['depends_on_packages'], common_packages=common_packages, d=d)
+                else:
+                    #Do nothing, this linked package does not depend on any other packages
+                    pass
+
+        else:
+            #Do nothing, the linked package is already created before
+            bb.note("Setting reference to package [%s] since it is created before" % linked_package)
+            linked_packages[linked_package]['depends_on_packages'] = {}
+            linked_packages[linked_package]['depends_on_packages'] = common_packages[linked_package]['depends_on_packages']
+
 
 def is_static_linking_flag_found(d):
     import re
@@ -1297,118 +1268,42 @@ def __check_type_of_files_generated(pkgfiles, d):
     
     return is_executables_generated, is_shared_libs_generated, is_static_libs_generated
 
-def __get_linked_packages_dependency_tree(raw_linked_lib_names, d):
+def package_qa_check_license_compliance(pkgs, pkgfiles, d):
+    pkg_work_dest = d.getVar('PKGDESTWORK')
 
-     #A list of linked libs with their attributes for ease of futher processing
-    linked_libs = {}
+    linked_packages = {}
 
-    #With each name in the raw linked libs
-    for raw_linked_lib_name in raw_linked_lib_names:
-        #Check for the matching lib files in RECIPE_SYSROOT/usr/lib
-        matched_lib_files = __get_matchhing_libs_in_recipe_sysroot_dir(raw_lib_name=raw_linked_lib_name, d=d)
+    #Check and extract for packages which contain *.so, *.a files or executables
+    for package in pkgs:
+        for file_path in pkgfiles[package]:
+            #Get the file name
+            file_name = os.path.basename(file_path)
 
-        #If there are more than one lib file matching the same name of a linked lib
-        if len(matched_lib_files) == 2:
-            #Extract the each lib in the matched lib files
-            for matched_lib_file in matched_lib_files.items():
-                if matched_lib_file[0].endswith('.so'):
-                    matched_shared_lib_file = matched_lib_file
-                elif matched_lib_file[0].endswith('.a'):
-                    matched_static_lib_file = matched_lib_file
-            
+            #Check if the target file can be a lib or an executable
+            if len(file_name.split('.')) > 1:
+                #Get the lib extension
+                lib_extension = file_name.split('.')[1]
 
-            #Check if compile log has pattern flag -static or .so is not a symbolic link
-            if is_static_linking_flag_found(d=d): #TODO: Be careful of libc.so since it is a ld script to link both static and dynamic libs, might need to have a unique check for this later
-                static_lib_file = matched_static_lib_file[0]
-                static_lib_file_path = matched_static_lib_file[1]
-
-                #Set linking attribute of the lib to static
-                lib_attributes = {
-                    "path": static_lib_file_path,
-                    "linking": "static"
-                }
-
-                #Add the .a lib into linked libs
-                linked_libs[static_lib_file] = lib_attributes
-                
-            
+                #Check if the file is a lib
+                if lib_extension == 'so' or lib_extension == 'a':
+                    #Add package to the linked_packages
+                    linked_packages[package] = {}
+                else:
+                    #Do nothing, the file is not a lib, which is not our concern
+                    pass
             else:
-                shared_lib_file = matched_shared_lib_file[0]
-                shared_lib_file_path = matched_shared_lib_file[1]
-
-                #Set linking attribute of the lib to dynamic
-                lib_attributes = {
-                    "path": shared_lib_file_path,
-                    "linking": "dynamic"
-                }
-
-                #Add the .so lib into linked libs
-                linked_libs[shared_lib_file] = lib_attributes
-
-        elif len(matched_lib_files) == 1:
-            #TODO: It is a little bit awkward to use a loop here since there is only one element in the dictionary, may find more elegant way to do this
-            for matched_lib_file in matched_lib_files.items():
-                lib_name = matched_lib_file[0]
-                lib_path = matched_lib_file[1]
-
-            #Set linking attribute to dynamic/static according ending .so/.a of the recently added lib
-            if lib_name.endswith('.so'):
-                linking_status = "dynamic"
-            elif lib_name.endswith('.a'):
-                linking_status = "static"
-            else:
-                #Signal error
-                bb.error("Currently this tool is just working for Linux, other libs from different OS platforms are not supported yet")
-            
-            #Add the lib .so/.a found into linked libs
-            lib_attributes = {
-                    "path": lib_path,
-                    "linking": linking_status
-            }
-            linked_libs[lib_name] = lib_attributes
-        else:
-            #Signal error, there must not be 3 libs matching the same name
-            bb.error("There are more than 2 lib files matching the %s " % raw_linked_lib_name)
-        
-
-    #Get a list of packages which provides the linked libs
-    linked_packages_dependency_tree = __get_packages_provide_the_linked_libs(linked_libs=linked_libs, d=d) #TODO: Please be noted, this method is currently can only work with packages which provide shared libs .so files
-
-    return linked_packages_dependency_tree
-
-def package_qa_check_license_compliance(packages, pkgfiles, d):
+                #Check if the file is an executable
+                if os.access(file_path, os.X_OK):
+                    #Add package to the linked_packages
+                    linked_packages[package] = {}
+                else:
+                    #Do nothing, the file is not an executable, which is not our concern
+                    pass
     
-    #Initialize local attributes
-    m_pkgfiles = pkgfiles
-    m_datastore = d
+    #Get the dependency tree of the linked packages
+    __recursively_add_dependent_packages(parent_package=None, linked_packages=linked_packages, common_packages = {}, d=d)
 
-    #Check if a recipe whether generates executables, shared libs, static libs or all
-    (is_executables_generated, is_shared_libs_generated, is_static_libs_generated ) = __check_type_of_files_generated(m_pkgfiles, m_datastore)
-
-    #If the package generates executables in PKGDEST/PN/usr/bin/
-    if is_executables_generated:
-        #Extract the linked libs from the latest compile log
-        raw_linked_lib_names = __get_linked_libs_name(m_datastore)
-
-        #Get the dependency tree of the linked packages
-        linked_packages_dependency_tree = __get_linked_packages_dependency_tree(raw_linked_lib_names=raw_linked_lib_names, d=m_datastore)
-        
-        #Apply the FOSS license check algorithm on the depend package list
-
-    #If the package generates .so libraries in PKGDEST/PN-dev/usr/lib/
-    if is_shared_libs_generated:
-        #Extract the linked libs from the latest compile log
-        raw_linked_lib_names = __get_linked_libs_name(m_datastore)
-
-        #Get the dependency tree of the linked packages
-        linked_packages_dependency_tree = __get_linked_packages_dependency_tree(raw_linked_lib_names=raw_linked_lib_names, d=m_datastore)
-        
-        #Apply the FOSS license check algorithm on the depend package list
-
-    #If the package generates .a libraries in PKGDEST/PN-staticdev/usr/lib/
-    if is_static_libs_generated:
-        pass
-        #TODO: TBD later
+    #Apply the FOSS license check algorithm on the linked packages
         
 
 def package_qa_check_deps(pkg, pkgdest, d):
@@ -1695,7 +1590,7 @@ python do_package_qa () {
     if 'libdir' in d.getVar("ALL_QA").split():
         package_qa_check_libdir(d)
     
-    package_qa_check_license_compliance(packages=packages, pkgfiles=pkgfiles, d=d)
+    package_qa_check_license_compliance(pkgs=packages, pkgfiles=pkgfiles,d=d)
 
     oe.qa.exit_if_errors(d)
 }
