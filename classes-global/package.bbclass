@@ -435,6 +435,8 @@ python package_depchains() {
 }
 
 python package_do_staticlibs() {
+    import static.static_libs_handle
+
     static.static_libs_handle.process_staticlibs(pkgfiles, d)
 }
 
@@ -477,7 +479,6 @@ PACKAGEFUNCS += " \
                 emit_pkgdata"
 
 python do_package () {
-    import static.static_libs_handle
     # Change the following version to cause sstate to invalidate the package
     # cache.  This is useful if an item this class depends on changes in a
     # way that the output of this class changes.  rpmdeps is a good example
