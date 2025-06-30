@@ -3,8 +3,13 @@ def process_staticlibs(pkgfiles, d):
 
     nm_command = d.getVar('NM')
 
+    #Get the debug package name
+    for pkg in pkgfiles.keys():
+        if pkg.endswith('-dbg'):
+            debug_pkg_name = pkg
+            break
+
     #Get a list of debug files generated in <recipe_name>-dbg of the current recipe
-    debug_pkg_name = d.getVar('PN') + '-dbg'
     debug_file_paths = pkgfiles[debug_pkg_name]
 
     #Extract list of shared libs .so
