@@ -1043,6 +1043,7 @@ def __recursively_add_dependent_packages(parent_package=None, linked_packages={}
                 linked_packages[linked_package]['license'] = []
                 linked_packages[linked_package]['linked_libs'] = {}
                 linked_packages[linked_package]['name'] = linked_package
+                linked_packages[linked_package]['end'] = False
 
                 #Create all extracted attributes
                 extracted_licenses = []
@@ -1148,10 +1149,17 @@ def __recursively_add_dependent_packages(parent_package=None, linked_packages={}
                     pass
 
         else:
-            #Do nothing, the linked package is already created before
-            bb.note("Setting reference to package [%s] since it is created before" % linked_package)
+            #Create empty attributes for the overlapped linked package
             linked_packages[linked_package]['depends_on_packages'] = {}
+            linked_packages[linked_package]['license'] = []
+            linked_packages[linked_package]['linked_libs'] = {}
+            linked_packages[linked_package]['name'] = linked_package
+            linked_packages[linked_package]['end'] = True # This attribute indicates that this is the end of this branch in the dependency tree
+
+            #Set reference of the overlapped linked package to its corresponding package in the common package pool
             linked_packages[linked_package]['depends_on_packages'] = common_packages[linked_package]['depends_on_packages']
+            linked_packages[linked_package]['license'] = common_packages[linked_package]['license']
+            linked_packages[linked_package]['linked_libs'] = common_packages[linked_package]['linked_libs']
 
 
 def is_static_linking_flag_found(d):
