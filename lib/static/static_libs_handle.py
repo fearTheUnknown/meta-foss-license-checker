@@ -175,7 +175,22 @@ def __add_info_from_pkgdata_dir(files, d):
 
         #Check if the file is located in RECIPE_SYSROOT or PKGDEST directory
         if recipe_sysroot_dir_path in file_path:
-            pass
+            root_filesystem_path_to_file = os.path.sep + os.path.relpath(file_path, recipe_sysroot_dir_path)
+
+            #Find which package provide the file
+            (package_name, file_path_in_filesystem) = __find_path(root_filesystem_path_to_file, d)
+
+            #Get recipe of the package
+            recipe_name = __get_recipe_of_package(package_name, d)
+
+            #Get license of the package
+            license_name = __get_license_of_package(package_name, d)
+
+            #Set package, recipe and license of the provided file
+            file.set_from_package(package_name)
+            file.set_from_recipe(recipe_name)
+            file.set_license(license_name)
+
         elif pkgdest_dir_path in file_path:
 
             #Get the path of file inside a root filesystem
