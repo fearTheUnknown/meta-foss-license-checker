@@ -287,3 +287,56 @@ class Executable(File):
     
     def set_symbol_table(self, symbolTable):
         self.m_symbolTable = symbolTable
+
+
+class ObjectFile(File):
+    def __init__(self, path='', name='', extension='', fromPackage='', fromRecipe='',license='', linkStatus = '', symbolTable={}):
+        super().__init__(path=path, name=name, extension=extension, fromPackage=fromPackage, fromRecipe=fromRecipe, license=license, linkStatus=linkStatus, symbolTable=symbolTable)
+    
+    def get_path(self):
+        return self.m_path
+    
+    def get_name(self):
+        return self.m_name
+    
+    def get_extension(self):
+        return self.m_extension
+    
+    def get_from_package(self):
+        return self.m_fromPackage
+    
+    def get_from_recipe(self):
+        return self.m_fromRecipe
+    
+    def get_license(self):
+        return self.m_license
+    
+    def get_link_status(self):
+        return self.m_linkStatus
+    
+    def get_symbol_table(self):
+        return self.m_symbolTable
+
+    def set_path(self, path):
+        self.m_path = path
+    
+    def set_name(self, name):
+        self.m_name = name
+    
+    def set_extension(self, extension):
+        self.m_extension = extension
+    
+    def set_from_package(self, fromPackage):
+        self.m_fromPackage = fromPackage
+    
+    def set_from_recipe(self, fromRecipe):
+        self.m_fromRecipe = fromRecipe
+    
+    def set_license(self, license):
+        self.m_license = license
+
+    def set_link_status(self, linkStatus):
+        self.m_linkStatus = linkStatus
+    
+    def set_symbol_table(self, symbolTable):
+        self.m_symbolTable = symbolTable
