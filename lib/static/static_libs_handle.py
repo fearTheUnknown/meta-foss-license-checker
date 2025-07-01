@@ -145,8 +145,20 @@ def __get_license_of_package(package_name, d):
         with open(package_metadata_file_path, 'r') as f:
             for line in f:
                 if line.startswith('LICENSE:'):
-                    license_name = line.split(':')[1].strip()
-                    return license_name
+
+                    parsed_license_entry = line.split(':')
+
+                    if len(parsed_license_entry) == 2:
+                        license_name = parsed_license_entry[1].strip()
+                        return license_name
+
+                    elif len(parsed_license_entry) == 3:
+                        license_name = parsed_license_entry[2].strip()
+                        return license_name
+                    
+                    else:
+                        bb.warn("Undefined format of LICENSE entry in package metadata file %s" % package_metadata_file_path)
+                    
     else:
         bb.error("Package metadata file %s does not exist" % package_metadata_file_path)
 
