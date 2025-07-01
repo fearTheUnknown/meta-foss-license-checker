@@ -1277,41 +1277,14 @@ def __check_type_of_files_generated(pkgfiles, d):
     return is_executables_generated, is_shared_libs_generated, is_static_libs_generated
 
 def package_qa_check_license_compliance(pkgs, pkgfiles, d):
-    pkg_work_dest = d.getVar('PKGDESTWORK')
-
-    linked_packages = {}
-
-    #Check and extract for packages which contain *.so, *.a files or executables
-    for package in pkgs:
-        for file_path in pkgfiles[package]:
-            #Get the file name
-            file_name = os.path.basename(file_path)
-
-            #Check if the target file can be a lib or an executable
-            if len(file_name.split('.')) > 1:
-                #Get the lib extension
-                lib_extension = file_name.split('.')[1]
-
-                #Check if the file is a lib
-                if lib_extension == 'so' or lib_extension == 'a':
-                    #Add package to the linked_packages
-                    linked_packages[package] = {}
-                else:
-                    #Do nothing, the file is not a lib, which is not our concern
-                    pass
-            else:
-                #Check if the file is an executable
-                if os.access(file_path, os.X_OK):
-                    #Add package to the linked_packages
-                    linked_packages[package] = {}
-                else:
-                    #Do nothing, the file is not an executable, which is not our concern
-                    pass
+    import static.static_libs_handle
     
-    #Get the dependency tree of the linked packages
-    __recursively_add_dependent_packages(parent_package=None, linked_packages=linked_packages, common_packages = {}, d=d)
+    #Get list of statically linked files in the current recipe
+    static.static_libs_handle.generate_static_linking_list(pkgfiles, d)
 
-    #Apply the FOSS license check algorithm on the linked packages
+    #Get list of dynamically linked files in the current recipe
+
+    #Apply the FOSS license check algorithm on list of statically linked files
         
 
 def package_qa_check_deps(pkg, pkgdest, d):
