@@ -72,6 +72,36 @@ def process_staticlibs(pkgfiles, d):
     # #Set linked static libs to env variable "STATICDEPENDLIST"
     # pass
 
+# Return type (bits):
+# 0 - not elf
+# 1 - ELF
+# 2 - stripped
+# 4 - executable
+# 8 - shared library
+# 16 - kernel module
+# 32 - object file
+# 64 - AR Archive (static library)
+def is_elf(path):
+    exec_type = 0
+    result = subprocess.check_output(["file", "-b", path], stderr=subprocess.STDOUT).decode("utf-8")
+
+    if "ELF" in result:
+        exec_type |= 1
+        if "not stripped" not in result:
+            exec_type |= 2
+        if "executable" in result:
+            exec_type |= 4
+        if "shared" in result:
+            exec_type |= 8
+        if "relocatable" in result:
+            if path.endswith(".ko") and path.find("/lib/modules/") != -1 and oe.package.is_kernel_module(path):
+                exec_type |= 16
+            elif path.endswith(".o"):
+                exec_type |= 32
+    elif "ar archive" in result:
+        exec_type |= 64
+    return (path, exec_type)
+
 def __find_path(filepath, d):
 
     pkgdata_dir_path = d.getVar('PKGDATA_DIR')
@@ -284,7 +314,7 @@ def __generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
         file_extension = os.path.splitext(file_name)[1]
 
         #Inquiry the properties of the file
-        (path,file_type) = oe.package.is_elf(file_path)
+        (path,file_type) = is_elf(file_path)
 
         #Check if file is a shared lib
         if (file_type & 1) and (file_type & 8):
