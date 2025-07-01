@@ -214,6 +214,11 @@ def __add_info_from_pkgdata_dir(files, d):
         else:
             bb.warn("File %s is not located in RECIPE_SYSROOT or PKGDEST directory" % file_path)
 
+def __create_symbol_table_static_lib(file_path, d):
+    symbol_table = {}
+
+    return symbol_table
+
 def __create_symbol_table(file_path, d):
     symbol_table = {}
 
@@ -331,7 +336,7 @@ def __create_symbol_table(file_path, d):
     return symbol_table
 
 def __generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
-    shared_lib_and_executable_list = []
+    elf_readable_list = []
 
     #Loop through each file path in the package
     for file_path in file_paths:
@@ -355,7 +360,7 @@ def __generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
                                    license='', symbolTable=symbol_table)
 
             #Add shared lib object to the list
-            shared_lib_and_executable_list.append(shared_lib)
+            elf_readable_list.append(shared_lib)
 
         #Check if file is an ELF executable
         elif (file_type & 1) and (file_type & 4):
@@ -369,15 +374,45 @@ def __generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
                                     license='', symbolTable=symbol_table)
 
             #Add file to the list
-            shared_lib_and_executable_list.append(executable)
+            elf_readable_list.append(executable)
+        
+        #Check if file is an object file
+        elif (file_type & 1) and (file_type & 32):
+
+            #Create a symbol table for the file
+            symbol_table = __create_symbol_table(file_path, d)
+
+            #Create object file object
+            object_file = ObjectFile(path=file_path, name=file_name, extension=file_extension,
+                                     fromPackage='', fromRecipe='',
+                                     license='', symbolTable=symbol_table)
+
+            #Add object file object to the list
+            elf_readable_list.append(object_file)
+        
+        #Check if file is an AR archive (static library)
+        elif (file_type & 64):
+
+            #Create a symbol table for the file
+            symbol_table = __create_symbol_table_static_lib(file_path, d)
+
+            #Create static lib object
+            static_lib = StaticLib(path=file_path, name=file_name, extension=file_extension,
+                                   fromPackage='', fromRecipe='',
+                                   license='', symbolTable=symbol_table)
+
+            #Add static lib object to the list
+            elf_readable_list.append(static_lib)
         
         else:
             #If file is not a shared lib or executable, ignore it
             pass
     
-    return shared_lib_and_executable_list
+    return elf_readable_list
 
 def __generate_list_of_statically_linked_libs(pkgfiles, d):
+    recipe_sysroot = d.getVar('RECIPE_SYSROOT')
+
     #Create a list of shared libs and executables located inside the debug package
     for pkg in pkgfiles.keys():
         if pkg.endswith('-dbg'):
@@ -391,10 +426,25 @@ def __generate_list_of_statically_linked_libs(pkgfiles, d):
     #Add from package, from recipe and license information to each shared lib and executable
     __add_info_from_pkgdata_dir(debug_shared_libs_and_executables, d)
 
+    print("List of shared libs and executables in debug package:")
     for file in debug_shared_libs_and_executables:
         print("File name: [%s] is from package [%s] of recipe [%s] with license [%s]" % (file.get_name(), file.get_from_package(), file.get_from_recipe(), file.get_license()) )
 
     #Create a list of static libs located in the RECIPE_SYSROOT directory
+    recipe_sysroot_file_paths = []
+    for root, dirs, files in os.walk(recipe_sysroot):
+        for file in files:
+            if file.endswith('.a') or file.endswith('.o'):
+                recipe_sysroot_file_paths.append(os.path.join(root, file))
+    
+    recipe_sysroot_static_libs_and_executables = __generate_list_of_shared_libs_and_executables(file_paths=recipe_sysroot_file_paths, d=d)
+
+     #Add from package, from recipe and license information to each static lib and executable
+    __add_info_from_pkgdata_dir(recipe_sysroot_static_libs_and_executables, d)
+
+    print("List of static libs and object files in RECIPE_SYSROOT:")
+    for file in recipe_sysroot_static_libs_and_executables:
+        print("File name: [%s] is from package [%s] of recipe [%s] with license [%s]" % (file.get_name(), file.get_from_package(), file.get_from_recipe(), file.get_license()) )
 
     #Perform the symbol compare to identify which static libs might be linked and set the linking status accordingly
     pass
