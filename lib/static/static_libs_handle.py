@@ -509,7 +509,7 @@ def __generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
         elif (file_type & 1) and (file_type & 4):
 
             #Create a symbol table for the file
-            symbol_table = __create_symbol_table(file_path)
+            symbol_table = __create_symbol_table(file_path, d)
 
             #Create executable object
             executable = Executable(path=file_path, name=file_name, extension=file_extension,
@@ -556,41 +556,42 @@ def __generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
 def __generate_list_of_statically_linked_libs(pkgfiles, d):
     recipe_sysroot = d.getVar('RECIPE_SYSROOT')
 
-    #Create a list of shared libs and executables located inside the debug package
+    #Look for debug package in the recipe
+    debug_pkg_name = None
     for pkg in pkgfiles.keys():
         if pkg.endswith('-dbg'):
             debug_pkg_name = pkg
             break
-
-    debug_file_paths = pkgfiles[debug_pkg_name]
-
-    debug_shared_libs_and_executables = __generate_list_of_shared_libs_and_executables(file_paths=debug_file_paths, d=d)
-
-    #Add from package, from recipe and license information to each shared lib and executable
-    __add_info_from_pkgdata_dir(debug_shared_libs_and_executables, d)
-
-    print("List of shared libs and executables in debug package:")
-    for file in debug_shared_libs_and_executables:
-        print("File name: [%s] is from package [%s] of recipe [%s] with license [%s]" % (file.get_name(), file.get_from_package(), file.get_from_recipe(), file.get_license()) )
-
-    #Create a list of static libs located in the RECIPE_SYSROOT directory
-    recipe_sysroot_file_paths = []
-    for root, dirs, files in os.walk(recipe_sysroot):
-        for file in files:
-            if file.endswith('.a') or file.endswith('.o'):
-                recipe_sysroot_file_paths.append(os.path.join(root, file))
     
-    recipe_sysroot_static_libs_and_executables = __generate_list_of_shared_libs_and_executables(file_paths=recipe_sysroot_file_paths, d=d)
+    if debug_pkg_name is not None:
+        #Create a list of shared libs and executables located inside the debug package of the recipe
+        debug_file_paths = pkgfiles[debug_pkg_name]
 
-     #Add from package, from recipe and license information to each static lib and executable
-    __add_info_from_pkgdata_dir(recipe_sysroot_static_libs_and_executables, d)
+        debug_shared_libs_and_executables = __generate_list_of_shared_libs_and_executables(file_paths=debug_file_paths, d=d)
 
-    print("List of static libs and object files in RECIPE_SYSROOT:")
-    for file in recipe_sysroot_static_libs_and_executables:
-        print("File name: [%s] is from package [%s] of recipe [%s] with license [%s]" % (file.get_name(), file.get_from_package(), file.get_from_recipe(), file.get_license()) )
+        #Add from package, from recipe and license information to each shared lib and executable
+        __add_info_from_pkgdata_dir(debug_shared_libs_and_executables, d)
 
-    #Perform the symbol compare to identify which static libs might be linked and set the linking status accordingly
-    pass
+        #Create a list of static libs located in the RECIPE_SYSROOT directory
+        recipe_sysroot_file_paths = []
+        for root, dirs, files in os.walk(recipe_sysroot):
+            for file in files:
+                if file.endswith('.a') or file.endswith('.o'):
+                    recipe_sysroot_file_paths.append(os.path.join(root, file))
+        
+        recipe_sysroot_static_libs_and_executables = __generate_list_of_shared_libs_and_executables(file_paths=recipe_sysroot_file_paths, d=d)
+
+        #Add from package, from recipe and license information to each static lib and executable
+        __add_info_from_pkgdata_dir(recipe_sysroot_static_libs_and_executables, d)
+
+        #Perform the symbol compare to identify which static libs might be linked and set the linking status accordingly
+
+        #Return the linked libs
+        
+    else:
+        #There is nothing to check in this case since we do not have package that provide debugging info
+        linked_libs = []
+        return linked_libs
 
 def generate_static_linking_list(pkgfiles, d):
     #Create list of linked static libs
