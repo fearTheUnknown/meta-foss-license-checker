@@ -217,6 +217,149 @@ def __add_info_from_pkgdata_dir(files, d):
 def __create_symbol_table_static_lib(file_path, d):
     symbol_table = {}
 
+    checked_symbols = []
+
+    #Get READELF command
+    readelf = d.getVar('READELF')
+
+    #Get symbol table log
+    symbol_table_log = subprocess.check_output([readelf, '-sW', file_path], stderr=subprocess.STDOUT).decode("utf-8")
+
+    previous_object_file_name = ''
+    for line in symbol_table_log.splitlines():
+
+        if line.startswith('File:'):
+            line_parts = line.split(':')
+
+            #Extract the file path
+            file_path = line_parts[1].strip()
+
+            #Extract lib name
+            lib_name = os.path.basename(file_path)
+
+            #Extract the name of object file
+            bracket_start = lib_name.index('(') + 1
+            bracket_end = lib_name.index(')')
+            object_file_name = lib_name[bracket_start:bracket_end]
+
+            #Add object file to the symbol table
+            symbol_table[object_file_name] = {}
+
+            #Set previous object file name for further use in the loop
+            previous_object_file_name = object_file_name
+
+            #Clear the checked symbols for the new object file
+            checked_symbols = []
+        
+        elif len(line) == 0:
+            #Ignore the line
+            pass
+        
+        elif line.startswith('Symbol table'):
+            #Ignore the line
+            pass
+        
+        elif 'Num:' in line:
+            #Ignore the line
+            pass
+
+        else: #This can only be a line containning symbol entry info of the previous object file
+            #Split the current line into a list
+            line_parts = line.split()
+
+            #Add the symbol and its attributes to the symbol table
+            if len(line_parts) == 8: #Valid symbol entry with symbol name
+                symbol_index = int(line_parts[0].split(':')[0])
+                symbol_value = line_parts[1]
+                symbol_size = line_parts[2]
+                symbol_type = line_parts[3]
+                symbol_bind = line_parts[4]
+                symbol_visibility = line_parts[5]
+                symbol_location = line_parts[6]
+                symbol_name = line_parts[7]
+
+                #If symbol has overlapping, then simply append the index to the symbol name of the symbol
+                if symbol_name in checked_symbols:
+                    symbol_name = symbol_name + str(symbol_index)
+                
+                symbol_attributes = {
+                    'index': symbol_index,
+                    'value': symbol_value,
+                    'size': symbol_size,
+                    'type': symbol_type,
+                    'bind': symbol_bind,
+                    'visibility': symbol_visibility,
+                    'location': symbol_location
+                }
+
+                #Add the symbol to the object file in symbol table
+                symbol_table[previous_object_file_name][symbol_name] = {}
+                symbol_table[previous_object_file_name][symbol_name] = symbol_attributes
+
+                #Update the symbol for checking overlapping in the future
+                checked_symbols.append(symbol_name)
+
+            elif len(line_parts) == 7: #Valid symbol entry without symbol name
+                symbol_index = int(line_parts[0].split(':')[0])
+                symbol_value = line_parts[1]
+                symbol_size = line_parts[2]
+                symbol_type = line_parts[3]
+                symbol_bind = line_parts[4]
+                symbol_visibility = line_parts[5]
+                symbol_location = line_parts[6]
+                symbol_name = 'blank' + str(symbol_index) #Assign blank name with index position
+
+                symbol_attributes = {
+                    'index': symbol_index,
+                    'value': symbol_value,
+                    'size': symbol_size,
+                    'type': symbol_type,
+                    'bind': symbol_bind,
+                    'visibility': symbol_visibility,
+                    'location': symbol_location
+                }
+
+                #Add the symbol attributes to the object file in symbol table
+                symbol_table[previous_object_file_name][symbol_name] = {}
+                symbol_table[previous_object_file_name][symbol_name] = symbol_attributes
+            
+            elif len(line_parts) == 9: #Valid symbol with additional PCS variant attribute
+                symbol_index = int(line_parts[0].split(':')[0])
+                symbol_value = line_parts[1]
+                symbol_size = line_parts[2]
+                symbol_type = line_parts[3]
+                symbol_bind = line_parts[4]
+                symbol_visibility = line_parts[5]
+                symbol_pcs_variant = line_parts[6] # This attribute shows that the symbol has a different Procedure Call Standard (PCS) as compared to standard one
+                symbol_location = line_parts[7]
+                symbol_name = line_parts[8]
+
+                #If symbol has overlapping, then simply append the index to the symbol name of the symbol
+                if symbol_name in checked_symbols:
+                    symbol_name = symbol_name + str(symbol_index)
+                
+                symbol_attributes = {
+                    'index': symbol_index,
+                    'value': symbol_value,
+                    'size': symbol_size,
+                    'type': symbol_type,
+                    'bind': symbol_bind,
+                    'visibility': symbol_visibility,
+                    'location': symbol_location,
+                    'special': symbol_pcs_variant # Indicate that this symbol has a different PCS variant
+                }
+
+                #Add the symbol attributes to the object file in symbol table
+                symbol_table[previous_object_file_name][symbol_name] = {}
+                symbol_table[previous_object_file_name][symbol_name] = symbol_attributes
+
+                #Update the symbol for checking overlapping in the future
+                checked_symbols.append(symbol_name)
+            else:
+                #If the line does not match the expected format, give the warning
+                bb.warn("Unexpected symbol format in symbol table of %s at line: %s" % (file_path, line))
+                pass
+
     return symbol_table
 
 def __create_symbol_table(file_path, d):
