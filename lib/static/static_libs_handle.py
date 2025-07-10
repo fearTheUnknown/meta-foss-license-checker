@@ -535,8 +535,13 @@ def __generate_strong_static_linked_libs(libs_to_compare,libs_to_be_compared,d):
                                 #Add the current static lib to the corresponding symbol in previous_strong_linked_symbols also
                                 previous_strong_linked_symbols[symbol_to_compare_name][file_to_be_compared.get_name()] = file_to_be_compared
 
-                                #Add the current static lib to the strong_static_linked_libs
-                                strong_static_linked_libs.append(file_to_be_compared)
+                                #Get file path list of libs in strong_static_linked_libs
+                                strong_static_linked_libs_paths = [lib.get_path() for lib in strong_static_linked_libs]
+
+                                #Add the current static lib to the strong_static_linked_libs if the current static lib is not already in the list
+                                file_to_be_compared_path = file_to_be_compared.get_path()
+                                if file_to_be_compared_path not in strong_static_linked_libs_paths:
+                                    strong_static_linked_libs.append(file_to_be_compared)
 
                                 #Set the flag to indicate that strong linking is found
                                 is_strong_linking_found = True
@@ -553,8 +558,13 @@ def __generate_strong_static_linked_libs(libs_to_compare,libs_to_be_compared,d):
                                 previous_strong_linked_symbols[symbol_to_compare_name] = {}
                                 previous_strong_linked_symbols[symbol_to_compare_name][file_to_be_compared.get_name()] = file_to_be_compared
 
-                                #Add the current static lib to the strong_static_linked_libs
-                                strong_static_linked_libs.append(file_to_be_compared)
+                                #Get file path list of libs in strong_static_linked_libs
+                                strong_static_linked_libs_paths = [lib.get_path() for lib in strong_static_linked_libs]
+
+                                #Add the current static lib to the strong_static_linked_libs if the current static lib is not already in the list
+                                file_to_be_compared_path = file_to_be_compared.get_path()
+                                if file_to_be_compared_path not in strong_static_linked_libs_paths:
+                                    strong_static_linked_libs.append(file_to_be_compared)
 
                                 #Set the flag to indicate that strong linking is found
                                 is_strong_linking_found = True
