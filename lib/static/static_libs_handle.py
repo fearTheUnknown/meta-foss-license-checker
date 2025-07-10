@@ -478,6 +478,101 @@ def __create_symbol_table(file_path, d):
 
     return symbol_table
 
+def __generate_strong_static_linked_libs(libs_to_compare,libs_to_be_compared,d):
+    strong_static_linked_libs = []
+
+    #For each file in libs_to_compare
+    for file_to_compare in libs_to_compare:
+
+        #Creat list of previous strong linked symbols
+        previous_strong_linked_symbols = {}
+
+        #Extract symbols of functions and variables with type FUNC/OBJECT, bind GLOBAL, visibility dont care, location is not UND
+        file_to_compare_symbol_table = file_to_compare.get_symbol_table()
+        symbols_to_compare = {}
+        for symbol_name in file_to_compare_symbol_table.keys():
+            if (file_to_compare_symbol_table[symbol_name]['type'] == 'FUNC' or file_to_compare_symbol_table[symbol_name]['type'] == 'OBJECT') and file_to_compare_symbol_table[symbol_name]['bind'] == 'GLOBAL' and file_to_compare_symbol_table[symbol_name]['location'] != 'UND':
+                symbols_to_compare[symbol_name] = file_to_compare_symbol_table[symbol_name]
+
+        #For each file in libs_to_be_compared
+        for file_to_be_compared in libs_to_be_compared:
+
+            #Check if the file is a static lib
+            if isinstance(file_to_be_compared, StaticLib):
+                file_to_be_compared_symbol_table = file_to_be_compared.get_symbol_table() #The file_to_be_compared_symbol_table is a dictionary of object files archived in the static lib
+
+                #If yes, for each object file in static lib
+                for object_file_name in file_to_be_compared_symbol_table.keys():
+
+                    is_strong_linking_found = False #Flag indicate that a strong symbol linking is found in this object file of the static lib under inspection
+
+                    #Extract symbols of functions and data objects with type FUNC/OBJECT, bind not LOCAL, visibility dont care, location is not UND
+                    object_file_symbols_to_be_compared = {}
+                    for symbol_name in file_to_be_compared_symbol_table[object_file_name].keys():
+                        if (file_to_be_compared_symbol_table[object_file_name][symbol_name]['type'] == 'FUNC' or file_to_be_compared_symbol_table[object_file_name][symbol_name]['type'] == 'OBJECT') and file_to_be_compared_symbol_table[object_file_name][symbol_name]['bind'] != 'LOCAL' and file_to_be_compared_symbol_table[object_file_name][symbol_name]['location'] != 'UND':
+                            object_file_symbols_to_be_compared[symbol_name] = file_to_be_compared_symbol_table[object_file_name][symbol_name]
+
+                    #Compare each symbol from symbols_to_compare to object_file_symbols_to_be_compared from the object file of the current static lib
+                    for symbol_to_compare_name in symbols_to_compare.keys():
+
+                        #If there is a symbol match
+                        if symbol_to_compare_name in object_file_symbols_to_be_compared.keys():
+
+                            #If the object file symbol is WEAK
+                            if object_file_symbols_to_be_compared[symbol_to_compare_name]['bind'] == 'WEAK':
+                                #Ignore it, no strong linking can happen with weak symbols
+                                pass
+
+                            #else if the object file symbol is in previous_strong_linked_symbols
+                            elif symbol_to_compare_name in previous_strong_linked_symbols.keys():
+                                #Set linking status of the current static lib to "duplicate strong static"
+                                file_to_be_compared.set_link_status('duplicate strong static')
+
+                                #Set linking status of all libs corresponding to the same strong symbol in previous_strong_linked_symbols to "duplicate strong static" also
+                                for linked_lib in previous_strong_linked_symbols[symbol_to_compare_name].values():
+                                    linked_lib.set_link_status('duplicate strong static')
+
+                                #Add the current static lib to the corresponding symbol in previous_strong_linked_symbols also
+                                previous_strong_linked_symbols[symbol_to_compare_name][file_to_be_compared.get_name()] = file_to_be_compared
+
+                                #Add the current static lib to the strong_static_linked_libs
+                                strong_static_linked_libs.append(file_to_be_compared)
+
+                                #Set the flag to indicate that strong linking is found
+                                is_strong_linking_found = True
+
+                                #Break out since there is no need to check for other symbols in symbols_to_compare
+                                break
+
+                            #else if the object file symbol is not WEAK and is not in previous_strong_linked_symbols
+                            elif object_file_symbols_to_be_compared[symbol_to_compare_name]['bind'] != 'WEAK' and symbol_to_compare_name not in previous_strong_linked_symbols.keys():
+                                #Set linking status of the static lib to "strong static"
+                                file_to_be_compared.set_link_status('strong static')
+
+                                #Add the symbol to previous_strong_linked_symbols with reference to the corresponding static lib
+                                previous_strong_linked_symbols[symbol_to_compare_name] = {}
+                                previous_strong_linked_symbols[symbol_to_compare_name][file_to_be_compared.get_name()] = file_to_be_compared
+
+                                #Add the current static lib to the strong_static_linked_libs
+                                strong_static_linked_libs.append(file_to_be_compared)
+
+                                #Set the flag to indicate that strong linking is found
+                                is_strong_linking_found = True
+
+                                #Break out since there is no need to check for other symbols in symbols_to_compare
+                                break
+                    
+
+                    #If strong linking is found, break the loop to avoid checking other object files in the static lib
+                    if is_strong_linking_found:
+                        break
+            else:
+                #TODO: Handle other types of files, simply extract symbols of functions and variables of the file
+                pass
+            
+    return strong_static_linked_libs
+
+
 def __generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
     elf_readable_list = []
 
