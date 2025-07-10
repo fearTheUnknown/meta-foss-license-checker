@@ -573,6 +573,18 @@ def __generate_strong_static_linked_libs(libs_to_compare,libs_to_be_compared,d):
     return strong_static_linked_libs
 
 
+def __generate_linked_libs(libs_to_compare,libs_to_be_compared,d):
+    #Get a list of libs with strong static linking
+    strong_static_linked_libs = __generate_strong_static_linked_libs(libs_to_compare, libs_to_be_compared, d)
+
+    #Get a list of libs with weak static linking (libs with strong static linking are excluded in this list)
+
+    #Combine 2 lists into a list of linked libs
+
+    #Return the linked libs
+
+    pass
+
 def __generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
     elf_readable_list = []
 
@@ -650,6 +662,7 @@ def __generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
 
 def __generate_list_of_statically_linked_libs(pkgfiles, d):
     recipe_sysroot = d.getVar('RECIPE_SYSROOT')
+    linked_libs = []
 
     #Look for debug package in the recipe
     debug_pkg_name = None
@@ -680,12 +693,13 @@ def __generate_list_of_statically_linked_libs(pkgfiles, d):
         __add_info_from_pkgdata_dir(recipe_sysroot_static_libs_and_executables, d)
 
         #Perform the symbol compare to identify which static libs might be linked and set the linking status accordingly
+        linked_libs = __generate_linked_libs(debug_shared_libs_and_executables, recipe_sysroot_static_libs_and_executables, d)
 
         #Return the linked libs
+        return linked_libs
         
     else:
         #There is nothing to check in this case since we do not have package that provide debugging info
-        linked_libs = []
         return linked_libs
 
 def generate_static_linking_list(pkgfiles, d):
