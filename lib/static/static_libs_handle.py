@@ -659,10 +659,10 @@ def __generate_linked_libs(libs_to_compare,libs_to_be_compared,d):
     weak_static_linked_libs = __generate_weak_static_linked_libs(libs_to_compare, libs_to_be_compared, d)
 
     #Combine 2 lists into a list of linked libs
+    static_linked_libs = strong_static_linked_libs + weak_static_linked_libs
 
     #Return the linked libs
-
-    pass
+    return static_linked_libs
 
 def __generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
     elf_readable_list = []
