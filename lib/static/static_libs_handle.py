@@ -478,6 +478,74 @@ def __create_symbol_table(file_path, d):
 
     return symbol_table
 
+def __generate_weak_static_linked_libs(libs_to_compare,libs_to_be_compared,d):
+    weak_static_linked_libs = []
+
+    #For each file in libs_to_compare
+    for file_to_compare in libs_to_compare:
+
+        #Extract symbols of functions and variables with type FUNC/OBJECT, bind WEAK, visibility dont care, location is not UND
+        file_to_compare_symbol_table = file_to_compare.get_symbol_table()
+        symbols_to_compare = {}
+        for symbol_name in file_to_compare_symbol_table.keys():
+            if (file_to_compare_symbol_table[symbol_name]['type'] == 'FUNC' or file_to_compare_symbol_table[symbol_name]['type'] == 'OBJECT') and file_to_compare_symbol_table[symbol_name]['bind'] == 'WEAK' and file_to_compare_symbol_table[symbol_name]['location'] != 'UND':
+                symbols_to_compare[symbol_name] = file_to_compare_symbol_table[symbol_name]
+                
+        #For each file in libs_to_be_compared
+        for file_to_be_compared in libs_to_be_compared:
+
+            #Check if the file is a static lib
+            if isinstance(file_to_be_compared, StaticLib):
+
+                file_to_be_compared_symbol_table = file_to_be_compared.get_symbol_table() #The file_to_be_compared_symbol_table is a dictionary of object files archived in the static lib
+
+                 #If yes, for each object file in static lib
+                for object_file_name in file_to_be_compared_symbol_table.keys():
+
+                    is_weak_linking_found = False #Flag indicate that a weak symbol linking is found in this object file of the static lib under inspection
+
+                    #Extract symbols of functions and data objects with type FUNC/OBJECT, bind WEAK, visibility dont care, location is not UND
+                    object_file_symbols_to_be_compared = {}
+                    for symbol_name in file_to_be_compared_symbol_table[object_file_name].keys():
+                        if (file_to_be_compared_symbol_table[object_file_name][symbol_name]['type'] == 'FUNC' or file_to_be_compared_symbol_table[object_file_name][symbol_name]['type'] == 'OBJECT') and file_to_be_compared_symbol_table[object_file_name][symbol_name]['bind'] == 'WEAK' and file_to_be_compared_symbol_table[object_file_name][symbol_name]['location'] != 'UND':
+                            object_file_symbols_to_be_compared[symbol_name] = file_to_be_compared_symbol_table[object_file_name][symbol_name]
+                    
+                    #Compare each symbol from symbols_to_compare to object_file_symbols_to_be_compared from the object file of the current static lib
+                    for symbol_to_compare_name in symbols_to_compare.keys():
+
+                        #If there is a symbol match
+                        if symbol_to_compare_name in object_file_symbols_to_be_compared.keys():
+
+                            #If the linking status of the corresponding static lib is already set
+                            if file_to_be_compared.get_link_status() != '':
+                                #Do nothing, by pass this static lib, we know for sure that this file might have some kinds of "strong linking" already
+                                is_weak_linking_found = True
+                                break
+                            
+                            #else if the linking status of the corresponding static lib is not set
+                            elif file_to_be_compared.get_link_status() == '':
+                                # Set linking status of the static lib to "weak static"
+                                file_to_be_compared.set_link_status('weak static')
+
+                                #Get file path list of libs in weak_static_linked_libs
+                                weak_static_linked_libs_paths = [lib.get_path() for lib in weak_static_linked_libs]
+
+                                # Add the current static lib to the weak_static_linked_libs if the current static lib is not already in the list
+                                file_to_be_compared_path = file_to_be_compared.get_path()
+                                if file_to_be_compared_path not in weak_static_linked_libs_paths:
+                                    weak_static_linked_libs.append(file_to_be_compared)
+
+                                #Go to next static lib
+                                is_weak_linking_found = True
+                                break
+
+                    #If weak linking is found, break out to next static lib.
+                    #A single sign of weak linking in an object file is enough to conclude linking status of the static lib
+                    if is_weak_linking_found:
+                        break
+
+    return weak_static_linked_libs
+
 def __generate_strong_static_linked_libs(libs_to_compare,libs_to_be_compared,d):
     strong_static_linked_libs = []
 
@@ -588,6 +656,7 @@ def __generate_linked_libs(libs_to_compare,libs_to_be_compared,d):
     strong_static_linked_libs = __generate_strong_static_linked_libs(libs_to_compare, libs_to_be_compared, d)
 
     #Get a list of libs with weak static linking (libs with strong static linking are excluded in this list)
+    weak_static_linked_libs = __generate_weak_static_linked_libs(libs_to_compare, libs_to_be_compared, d)
 
     #Combine 2 lists into a list of linked libs
 
