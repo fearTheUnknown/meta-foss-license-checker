@@ -1280,7 +1280,7 @@ def package_qa_check_license_compliance(pkgs, pkgfiles, d):
     import static.static_libs_handle
     
     #Get list of statically linked files in the current recipe
-    static.static_libs_handle.generate_static_linking_list(pkgfiles, d)
+    static_linking_files = static.static_libs_handle.generate_static_linking_list(pkgfiles, d)
 
     #Get list of dynamically linked files in the current recipe
 
