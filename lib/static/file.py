@@ -42,11 +42,7 @@ class File(ABC):
     @abstractmethod
     def get_symbol_table(self):
         pass
-
-
-
-
-
+    
     @abstractmethod
     def set_path(self):
         pass
