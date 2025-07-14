@@ -593,12 +593,60 @@ def __generate_strong_static_linked_libs(libs_to_compare,libs_to_be_compared,d):
 
                             #else if the object file symbol is in previous_strong_linked_symbols
                             elif symbol_to_compare_name in previous_strong_linked_symbols.keys():
+                                #Get the duplicated strong symbols of the current static lib
+                                file_to_be_compared_duplicate_symbols = file_to_be_compared.get_duplicate_linked_symbols()
+
+                                #Get file path of the file to compare
+                                file_to_compare_path = file_to_compare.get_path()
+
                                 #Set linking status of the current static lib to "duplicate strong static"
                                 file_to_be_compared.set_link_status('duplicate strong static')
 
-                                #Set linking status of all libs corresponding to the same strong symbol in previous_strong_linked_symbols to "duplicate strong static" also
+                                #Add duplicate symbol to file_to_be_compared_duplicate_symbols
+                                if symbol_to_compare_name not in file_to_be_compared_duplicate_symbols.keys():
+                                    #If the duplicate symbol is not already recorded as duplicate symbol before, it is then created now for this lib
+                                    file_to_be_compared_duplicate_symbols[symbol_to_compare_name] = {}
+                                    file_to_be_compared_duplicate_symbols[symbol_to_compare_name]['reported_by'] = {}
+                                else:
+                                    #Do nothing, the symbol is already recorded before
+                                    pass
+
+                                #Add the file_to_compare which report this duplicate symbol and a list of files which have the same duplicate symbol
+                                if file_to_compare_path not in file_to_be_compared_duplicate_symbols[symbol_to_compare_name]['reported_by'].keys():
+                                    file_to_be_compared_duplicate_symbols[symbol_to_compare_name]['reported_by'][file_to_compare_path] = {}
+                                    file_to_be_compared_duplicate_symbols[symbol_to_compare_name]['reported_by'][file_to_compare_path]['duplicate_files'] = previous_strong_linked_symbols[symbol_to_compare_name]
+                                else:
+                                    #If the file_to_compare is already recorded as reporting this duplicate symbol, do nothing to avoid overwriting
+                                    pass
+
+                                #Set linking status of all libs corresponding to the same strong symbol in previous_strong_linked_symbols to "duplicate strong static" and create the corresponding duplicate symbols also
                                 for linked_lib in previous_strong_linked_symbols[symbol_to_compare_name].values():
+                                    #Set linking status of the linked lib to "duplicate strong static"
                                     linked_lib.set_link_status('duplicate strong static')
+
+                                    #Get the duplicate symbols of the linked lib
+                                    linked_lib_duplicate_symbols = linked_lib.get_duplicate_linked_symbols()
+
+                                    #The steps below are the same as steps above which used to create a list of duplicate symbols
+                                    #We have to manually repeat these 2 steps to ensure that we are actually appending the new reporter to the  duplicate symbols of the linked lib
+                                    #Setting the duplicate linked symbols using the method "set_duplicate_linked_symbols" is replacing the whole duplicate symbols of the linked lib, which is not what we want
+
+                                    #Add the duplicate symbol to the linked lib
+                                    if symbol_to_compare_name not in linked_lib_duplicate_symbols.keys():
+                                        #If the duplicate symbol is not already recorded as duplicate symbol before, it is then created now for this lib
+                                        linked_lib_duplicate_symbols[symbol_to_compare_name] = {}
+                                        linked_lib_duplicate_symbols[symbol_to_compare_name]['reported_by'] = {}
+                                    else:
+                                        #Do nothing, the symbol is already recorded before
+                                        pass
+
+                                    #Add the file_to_compare which report this duplicate symbol and a list of files which have the same duplicate symbol
+                                    if file_to_compare_path not in linked_lib_duplicate_symbols[symbol_to_compare_name]['reported_by'].keys():
+                                        linked_lib_duplicate_symbols[symbol_to_compare_name]['reported_by'][file_to_compare_path] = {}
+                                        linked_lib_duplicate_symbols[symbol_to_compare_name]['reported_by'][file_to_compare_path]['duplicate_files'] = previous_strong_linked_symbols[symbol_to_compare_name]
+                                    else:
+                                        #If the file_to_compare is already recorded as reporting this duplicate symbol, do nothing to avoid overwriting
+                                        pass
 
                                 #Add the current static lib to the corresponding symbol in previous_strong_linked_symbols also
                                 previous_strong_linked_symbols[symbol_to_compare_name][file_to_be_compared.get_name()] = file_to_be_compared
@@ -639,6 +687,9 @@ def __generate_strong_static_linked_libs(libs_to_compare,libs_to_be_compared,d):
 
                                 #Break out since there is no need to check for other symbols in symbols_to_compare
                                 break
+                        else:
+                            #If there is no symbol match, do nothing
+                            pass
                     
 
                     #If strong linking is found, break the loop to avoid checking other object files in the static lib
@@ -686,7 +737,7 @@ def __generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
             #Create shared lib object
             shared_lib = SharedLib(path=file_path, name=file_name, extension=file_extension,
                                    fromPackage='', fromRecipe='',
-                                   license='', symbolTable=symbol_table)
+                                   license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={})
 
             #Add shared lib object to the list
             elf_readable_list.append(shared_lib)
@@ -700,7 +751,7 @@ def __generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
             #Create executable object
             executable = Executable(path=file_path, name=file_name, extension=file_extension,
                                     fromPackage='', fromRecipe='',
-                                    license='', symbolTable=symbol_table)
+                                    license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={})
 
             #Add file to the list
             elf_readable_list.append(executable)
@@ -714,7 +765,7 @@ def __generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
             #Create object file object
             object_file = ObjectFile(path=file_path, name=file_name, extension=file_extension,
                                      fromPackage='', fromRecipe='',
-                                     license='', symbolTable=symbol_table)
+                                     license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={})
 
             #Add object file object to the list
             elf_readable_list.append(object_file)
@@ -728,7 +779,7 @@ def __generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
             #Create static lib object
             static_lib = StaticLib(path=file_path, name=file_name, extension=file_extension,
                                    fromPackage='', fromRecipe='',
-                                   license='', symbolTable=symbol_table)
+                                   license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={})
 
             #Add static lib object to the list
             elf_readable_list.append(static_lib)
