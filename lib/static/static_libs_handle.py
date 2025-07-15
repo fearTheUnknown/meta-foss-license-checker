@@ -1,4 +1,4 @@
-from static.file import *
+from file import *
 from pprint import pprint
 import oe.package
 import os
