@@ -942,8 +942,19 @@ def __generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
             #Add static lib object to the list
             elf_readable_list.append(static_lib)
         
+        #Check if file is a C header file
+        elif file_type == 0 and file_extension == '.h':
+
+            #Create header file
+            header_file = HeaderFile(path=file_path, name=file_name, extension=file_extension,
+                                     fromPackage='', fromRecipe='',
+                                     license='', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={})
+            
+            #Add header file to the list
+            elf_readable_list.append(header_file)
+        
         else:
-            #If file is not a shared lib or executable, ignore it
+            #If file is not among predefined file types above, ignore it
             pass
     
     return elf_readable_list
@@ -990,11 +1001,33 @@ def __generate_list_of_statically_linked_libs(pkgfiles, d):
         #There is nothing to check in this case since we do not have package that provide debugging info
         return linked_libs
 
+
+def __generate_list_of_statically_linked_header_files(d):
+    recipe_sysroot = d.getVar('RECIPE_SYSROOT')
+
+    #Create a list of header files located in the RECIPE_SYSROOT directory
+    recipe_sysroot_file_paths = []
+    for root, dirs, files in os.walk(recipe_sysroot):
+        for file in files:
+            if file.endswith('.h'):
+                recipe_sysroot_file_paths.append(os.path.join(root, file))
+    
+    #Generate a list of header files in the RECIPE_SYSROOT directory
+    recipe_sysroot_header_files = __generate_list_of_shared_libs_and_executables(file_paths=recipe_sysroot_file_paths, d=d)
+
+    #Add from package, from recipe and license information to each header file
+    __add_info_from_pkgdata_dir(recipe_sysroot_header_files, d)
+
+    return recipe_sysroot_header_files
+
 def generate_static_linking_list(pkgfiles, d):
     #Create list of linked static libs
     linked_static_libs = __generate_list_of_statically_linked_libs(pkgfiles, d)
 
     #Create list of linked header files
+    linked_header_files = __generate_list_of_statically_linked_header_files(d)
 
     #Combine the two lists into a list of static linked files
-    pass
+    static_linked_files = linked_static_libs + linked_header_files
+    
+    return static_linked_files
