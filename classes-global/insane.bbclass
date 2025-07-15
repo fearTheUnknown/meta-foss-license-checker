@@ -1043,6 +1043,7 @@ def __recursively_add_dependent_packages(parent_package=None, linked_packages={}
                 linked_packages[linked_package]['license'] = []
                 linked_packages[linked_package]['linked_libs'] = {}
                 linked_packages[linked_package]['name'] = linked_package
+                linked_packages[linked_package]['end'] = False
 
                 #Create all extracted attributes
                 extracted_licenses = []
@@ -1148,10 +1149,17 @@ def __recursively_add_dependent_packages(parent_package=None, linked_packages={}
                     pass
 
         else:
-            #Do nothing, the linked package is already created before
-            bb.note("Setting reference to package [%s] since it is created before" % linked_package)
+            #Create empty attributes for the overlapped linked package
             linked_packages[linked_package]['depends_on_packages'] = {}
+            linked_packages[linked_package]['license'] = []
+            linked_packages[linked_package]['linked_libs'] = {}
+            linked_packages[linked_package]['name'] = linked_package
+            linked_packages[linked_package]['end'] = True # This attribute indicates that this is the end of this branch in the dependency tree
+
+            #Set reference of the overlapped linked package to its corresponding package in the common package pool
             linked_packages[linked_package]['depends_on_packages'] = common_packages[linked_package]['depends_on_packages']
+            linked_packages[linked_package]['license'] = common_packages[linked_package]['license']
+            linked_packages[linked_package]['linked_libs'] = common_packages[linked_package]['linked_libs']
 
 
 def is_static_linking_flag_found(d):
@@ -1269,41 +1277,14 @@ def __check_type_of_files_generated(pkgfiles, d):
     return is_executables_generated, is_shared_libs_generated, is_static_libs_generated
 
 def package_qa_check_license_compliance(pkgs, pkgfiles, d):
-    pkg_work_dest = d.getVar('PKGDESTWORK')
-
-    linked_packages = {}
-
-    #Check and extract for packages which contain *.so, *.a files or executables
-    for package in pkgs:
-        for file_path in pkgfiles[package]:
-            #Get the file name
-            file_name = os.path.basename(file_path)
-
-            #Check if the target file can be a lib or an executable
-            if len(file_name.split('.')) > 1:
-                #Get the lib extension
-                lib_extension = file_name.split('.')[1]
-
-                #Check if the file is a lib
-                if lib_extension == 'so' or lib_extension == 'a':
-                    #Add package to the linked_packages
-                    linked_packages[package] = {}
-                else:
-                    #Do nothing, the file is not a lib, which is not our concern
-                    pass
-            else:
-                #Check if the file is an executable
-                if os.access(file_path, os.X_OK):
-                    #Add package to the linked_packages
-                    linked_packages[package] = {}
-                else:
-                    #Do nothing, the file is not an executable, which is not our concern
-                    pass
+    import static.static_libs_handle
     
-    #Get the dependency tree of the linked packages
-    __recursively_add_dependent_packages(parent_package=None, linked_packages=linked_packages, common_packages = {}, d=d)
+    #Get list of statically linked files in the current recipe
+    static_linking_files = static.static_libs_handle.generate_static_linking_list(pkgfiles, d)
 
-    #Apply the FOSS license check algorithm on the linked packages
+    #Get list of dynamically linked files in the current recipe
+
+    #Apply the FOSS license check algorithm on list of statically linked files
         
 
 def package_qa_check_deps(pkg, pkgdest, d):
