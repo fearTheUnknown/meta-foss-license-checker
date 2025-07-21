@@ -367,7 +367,8 @@ def generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
 
         #Extract file attributes
         file_name = os.path.basename(file_path)
-        file_extension = os.path.splitext(file_name)[1]
+        file_name_parts = file_name.split('.',1)
+        file_extension = '.' + file_name_parts[1] if len(file_name_parts) > 1 else ''
 
         #Inquiry the properties of the file
         (path,file_type) = is_elf(file_path)
