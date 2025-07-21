@@ -91,7 +91,7 @@ class RecipeConfig:
         #Add a message to the list of messages
         self.m_messages.append(message)
     
-    def add_file_to_check(self, file):
+    def add_file_to_be_checked(self, file):
         #Add file that need to be checked further
         self.m_files_to_be_checked.append(file)
     
