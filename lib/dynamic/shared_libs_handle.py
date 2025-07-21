@@ -152,9 +152,9 @@ def generate_dynamic_linking_list(pkgfiles, d):
     #Add from package, from recipe and license information to each shared lib
     add_info_from_pkgdata_dir(recipe_sysroot_linked_shared_libs, d)
 
-    #Set linking status of all shared libs to "dynamic linking"
+    #Set linking status of all shared libs to "dynamic"
     for lib in recipe_sysroot_linked_shared_libs:
-        lib.set_link_status('dynamic linking')
+        lib.set_link_status('dynamic')
     
     #Return the list of linked shared libs
     return recipe_sysroot_linked_shared_libs
