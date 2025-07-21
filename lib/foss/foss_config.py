@@ -100,3 +100,10 @@ class RecipeConfig:
     
     def get_files_to_be_checked(self):
         return self.m_files_to_be_checked
+    
+    def is_message_buffer_empty(self):
+        #Check if the message buffer is empty
+        if self.m_messages == []:
+            return True
+        else:
+            return False
