@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 class File(ABC):
-    def __init__(self, path='', name='', extension='', fromPackage='', fromRecipe='',license='', linkStatus = '', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}):
+    def __init__(self, path='', name='', extension='', fromPackage='', fromRecipe='',license='', linkStatus = '', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}, checksum=''):
         self.m_path = path
         self.m_name = name
         self.m_extension = extension
@@ -13,6 +13,7 @@ class File(ABC):
         self.m_strongLinkedSymbols = strongLinkedSymbols
         self.m_weakLinkedSymbols = weakLinkedSymbols
         self.m_duplicateLinkedSymbols = duplicateLinkedSymbols
+        self.m_checksum = checksum
     
     @abstractmethod
     def get_path(self):
@@ -56,6 +57,10 @@ class File(ABC):
 
     @abstractmethod
     def get_duplicate_linked_symbols(self):
+        pass
+
+    @abstractmethod
+    def get_checksum(self):
         pass
     
     @abstractmethod
@@ -63,49 +68,53 @@ class File(ABC):
         pass
     
     @abstractmethod
-    def set_name(self):
+    def set_name(self, name):
         pass
     
     @abstractmethod
-    def set_extension(self):
+    def set_extension(self, extension):
         pass
     
     @abstractmethod
-    def set_from_package(self):
+    def set_from_package(self, fromPackage):
         pass
     
     @abstractmethod
-    def set_from_recipe(self):
+    def set_from_recipe(self, fromRecipe):
         pass
     
     @abstractmethod
-    def set_license(self):
+    def set_license(self, license):
         pass
     
     @abstractmethod
-    def set_link_status(self):
+    def set_link_status(self, linkStatus):
         pass
 
     @abstractmethod
-    def set_symbol_table(self):
+    def set_symbol_table(self, symbolTable):
         pass
 
     @abstractmethod
-    def set_strong_linked_symbols(self):
+    def set_strong_linked_symbols(self, strongLinkedSymbols):
         pass
 
     @abstractmethod
-    def set_weak_linked_symbols(self):
+    def set_weak_linked_symbols(self, weakLinkedSymbols):
         pass
 
     @abstractmethod
-    def set_duplicate_linked_symbols(self):
+    def set_duplicate_linked_symbols(self, duplicateLinkedSymbols):
+        pass
+
+    @abstractmethod
+    def set_checksum(self, checksum):
         pass
 
 class HeaderFile(File):
-    def __init__(self, path='', name='', extension='', fromPackage='', fromRecipe='',license='', linkStatus = '', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}):
-        super().__init__(path=path, name=name, extension=extension, fromPackage=fromPackage, fromRecipe=fromRecipe, license=license, linkStatus=linkStatus, symbolTable=symbolTable, strongLinkedSymbols=strongLinkedSymbols, weakLinkedSymbols=weakLinkedSymbols, duplicateLinkedSymbols=duplicateLinkedSymbols)
-    
+    def __init__(self, path='', name='', extension='', fromPackage='', fromRecipe='',license='', linkStatus = '', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}, checksum=''):
+        super().__init__(path=path, name=name, extension=extension, fromPackage=fromPackage, fromRecipe=fromRecipe, license=license, linkStatus=linkStatus, symbolTable=symbolTable, strongLinkedSymbols=strongLinkedSymbols, weakLinkedSymbols=weakLinkedSymbols, duplicateLinkedSymbols=duplicateLinkedSymbols, checksum=checksum)
+
     def get_path(self):
         return self.m_path
     
@@ -138,6 +147,9 @@ class HeaderFile(File):
     
     def get_duplicate_linked_symbols(self):
         return self.m_duplicateLinkedSymbols
+    
+    def get_checksum(self):
+        return self.m_checksum
 
     def set_path(self, path):
         self.m_path = path
@@ -172,11 +184,13 @@ class HeaderFile(File):
     def set_duplicate_linked_symbols(self, duplicateLinkedSymbols):
         self.m_duplicateLinkedSymbols = duplicateLinkedSymbols
 
+    def set_checksum(self, checksum):
+        self.m_checksum = checksum
 
 class StaticLib(File):
-    def __init__(self, path='', name='', extension='', fromPackage='', fromRecipe='',license='', linkStatus = '', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}):
-        super().__init__(path=path, name=name, extension=extension, fromPackage=fromPackage, fromRecipe=fromRecipe, license=license, linkStatus=linkStatus, symbolTable=symbolTable, strongLinkedSymbols=strongLinkedSymbols, weakLinkedSymbols=weakLinkedSymbols, duplicateLinkedSymbols=duplicateLinkedSymbols)
-    
+    def __init__(self, path='', name='', extension='', fromPackage='', fromRecipe='',license='', linkStatus = '', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}, checksum=''):
+        super().__init__(path=path, name=name, extension=extension, fromPackage=fromPackage, fromRecipe=fromRecipe, license=license, linkStatus=linkStatus, symbolTable=symbolTable, strongLinkedSymbols=strongLinkedSymbols, weakLinkedSymbols=weakLinkedSymbols, duplicateLinkedSymbols=duplicateLinkedSymbols, checksum=checksum)
+
     def get_path(self):
         return self.m_path
     
@@ -210,6 +224,9 @@ class StaticLib(File):
     def get_duplicate_linked_symbols(self):
         return self.m_duplicateLinkedSymbols
     
+    def get_checksum(self):
+        return self.m_checksum
+    
     def set_path(self, path):
         self.m_path = path
     
@@ -242,11 +259,14 @@ class StaticLib(File):
     
     def set_duplicate_linked_symbols(self, duplicateLinkedSymbols):
         self.m_duplicateLinkedSymbols = duplicateLinkedSymbols
+    
+    def set_checksum(self, checksum):
+        self.m_checksum = checksum
 
 class SharedLib(File):
-    def __init__(self, path='', name='', extension='', fromPackage='', fromRecipe='',license='', linkStatus = '', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}):
-        super().__init__(path=path, name=name, extension=extension, fromPackage=fromPackage, fromRecipe=fromRecipe, license=license, linkStatus=linkStatus, symbolTable=symbolTable, strongLinkedSymbols=strongLinkedSymbols, weakLinkedSymbols=weakLinkedSymbols, duplicateLinkedSymbols=duplicateLinkedSymbols)
-    
+    def __init__(self, path='', name='', extension='', fromPackage='', fromRecipe='',license='', linkStatus = '', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}, checksum=''):
+        super().__init__(path=path, name=name, extension=extension, fromPackage=fromPackage, fromRecipe=fromRecipe, license=license, linkStatus=linkStatus, symbolTable=symbolTable, strongLinkedSymbols=strongLinkedSymbols, weakLinkedSymbols=weakLinkedSymbols, duplicateLinkedSymbols=duplicateLinkedSymbols, checksum=checksum)
+
     def get_path(self):
         return self.m_path
     
@@ -280,6 +300,9 @@ class SharedLib(File):
     def get_duplicate_linked_symbols(self):
         return self.m_duplicateLinkedSymbols
     
+    def get_checksum(self):
+        return self.m_checksum
+    
     def set_path(self, path):
         self.m_path = path
     
@@ -312,11 +335,14 @@ class SharedLib(File):
     
     def set_duplicate_linked_symbols(self, duplicateLinkedSymbols):
         self.m_duplicateLinkedSymbols = duplicateLinkedSymbols
+    
+    def set_checksum(self, checksum):
+        self.m_checksum = checksum
 
 class Executable(File):
-    def __init__(self, path='', name='', extension='', fromPackage='', fromRecipe='',license='', linkStatus = '', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}):
-        super().__init__(path=path, name=name, extension=extension, fromPackage=fromPackage, fromRecipe=fromRecipe, license=license, linkStatus=linkStatus, symbolTable=symbolTable, strongLinkedSymbols=strongLinkedSymbols, weakLinkedSymbols=weakLinkedSymbols, duplicateLinkedSymbols=duplicateLinkedSymbols)
-    
+    def __init__(self, path='', name='', extension='', fromPackage='', fromRecipe='',license='', linkStatus = '', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}, checksum=''):
+        super().__init__(path=path, name=name, extension=extension, fromPackage=fromPackage, fromRecipe=fromRecipe, license=license, linkStatus=linkStatus, symbolTable=symbolTable, strongLinkedSymbols=strongLinkedSymbols, weakLinkedSymbols=weakLinkedSymbols, duplicateLinkedSymbols=duplicateLinkedSymbols, checksum=checksum)
+
     def get_path(self):
         return self.m_path
     
@@ -350,6 +376,9 @@ class Executable(File):
     def get_duplicate_linked_symbols(self):
         return self.m_duplicateLinkedSymbols
     
+    def get_checksum(self):
+        return self.m_checksum
+    
     def set_path(self, path):
         self.m_path = path
     
@@ -382,11 +411,14 @@ class Executable(File):
     
     def set_duplicate_linked_symbols(self, duplicateLinkedSymbols):
         self.m_duplicateLinkedSymbols = duplicateLinkedSymbols
+
+    def set_checksum(self, checksum):
+        self.m_checksum = checksum
 
 class ObjectFile(File):
-    def __init__(self, path='', name='', extension='', fromPackage='', fromRecipe='',license='', linkStatus = '', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}):
-        super().__init__(path=path, name=name, extension=extension, fromPackage=fromPackage, fromRecipe=fromRecipe, license=license, linkStatus=linkStatus, symbolTable=symbolTable, strongLinkedSymbols=strongLinkedSymbols, weakLinkedSymbols=weakLinkedSymbols, duplicateLinkedSymbols=duplicateLinkedSymbols)
-    
+    def __init__(self, path='', name='', extension='', fromPackage='', fromRecipe='',license='', linkStatus = '', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}, checksum=''):
+        super().__init__(path=path, name=name, extension=extension, fromPackage=fromPackage, fromRecipe=fromRecipe, license=license, linkStatus=linkStatus, symbolTable=symbolTable, strongLinkedSymbols=strongLinkedSymbols, weakLinkedSymbols=weakLinkedSymbols, duplicateLinkedSymbols=duplicateLinkedSymbols, checksum=checksum)
+
     def get_path(self):
         return self.m_path
     
@@ -419,6 +451,9 @@ class ObjectFile(File):
     
     def get_duplicate_linked_symbols(self):
         return self.m_duplicateLinkedSymbols
+    
+    def get_checksum(self):
+        return self.m_checksum
 
     def set_path(self, path):
         self.m_path = path
@@ -452,3 +487,6 @@ class ObjectFile(File):
     
     def set_duplicate_linked_symbols(self, duplicateLinkedSymbols):
         self.m_duplicateLinkedSymbols = duplicateLinkedSymbols
+    
+    def set_checksum(self, checksum):
+        self.m_checksum = checksum

@@ -3,6 +3,7 @@ from file import *
 import json
 import fnmatch
 import oe.package
+import hashlib
 
 # Return type (bits):
 # 0 - not elf
@@ -34,6 +35,17 @@ def is_elf(path):
         exec_type |= 64
     return (path, exec_type)
 
+#Function code copied from https://www.geeksforgeeks.org/python/python-program-to-find-hash-of-file/
+def compute_file_hash(file_path, algorithm='sha256'):
+    """Compute the hash of a file using the specified algorithm."""
+    hash_func = hashlib.new(algorithm)
+    
+    with open(file_path, 'rb') as file:
+        # Read the file in chunks of 8192 bytes
+        while chunk := file.read(8192):
+            hash_func.update(chunk)
+    
+    return hash_func.hexdigest()
 
 def find_path(filepath, d):
 
@@ -370,6 +382,9 @@ def generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
         file_name_parts = file_name.split('.',1)
         file_extension = '.' + file_name_parts[1] if len(file_name_parts) > 1 else ''
 
+        #Calculate checksum of the file
+        checksum = compute_file_hash(file_path, 'sha256')
+
         #Inquiry the properties of the file
         (path,file_type) = is_elf(file_path)
 
@@ -382,7 +397,7 @@ def generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
             #Create shared lib object
             shared_lib = SharedLib(path=file_path, name=file_name, extension=file_extension,
                                    fromPackage='', fromRecipe='',
-                                   license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={})
+                                   license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={}, checksum=checksum)
 
             #Add shared lib object to the list
             elf_readable_list.append(shared_lib)
@@ -396,7 +411,7 @@ def generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
             #Create executable object
             executable = Executable(path=file_path, name=file_name, extension=file_extension,
                                     fromPackage='', fromRecipe='',
-                                    license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={})
+                                    license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={}, checksum=checksum)
 
             #Add file to the list
             elf_readable_list.append(executable)
@@ -410,7 +425,7 @@ def generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
             #Create object file object
             object_file = ObjectFile(path=file_path, name=file_name, extension=file_extension,
                                      fromPackage='', fromRecipe='',
-                                     license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={})
+                                     license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={}, checksum=checksum)
 
             #Add object file object to the list
             elf_readable_list.append(object_file)
@@ -424,7 +439,7 @@ def generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
             #Create static lib object
             static_lib = StaticLib(path=file_path, name=file_name, extension=file_extension,
                                    fromPackage='', fromRecipe='',
-                                   license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={})
+                                   license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={}, checksum=checksum)
 
             #Add static lib object to the list
             elf_readable_list.append(static_lib)
@@ -435,7 +450,7 @@ def generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
             #Create header file
             header_file = HeaderFile(path=file_path, name=file_name, extension=file_extension,
                                      fromPackage='', fromRecipe='',
-                                     license='', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={})
+                                     license='', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}, checksum=checksum)
             
             #Add header file to the list
             elf_readable_list.append(header_file)
