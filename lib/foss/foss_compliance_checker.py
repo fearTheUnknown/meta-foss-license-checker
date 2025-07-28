@@ -39,8 +39,8 @@ def foss_license_compliance_check(linked_files, d):
     approved_files = recipe_config_object.get_approved_files()
     files_to_be_checked = recipe_config_object.get_files_to_be_checked()
 
-    approved_file_names = [file.get_name() for file in approved_files]
-    files_to_be_checked_names = [file.get_name() for file in files_to_be_checked]
+    approved_file_paths = [file.get_path() for file in approved_files]
+    files_to_be_checked_paths = [file.get_path() for file in files_to_be_checked]
 
     #
     #Perform the FOSS license compliance check on the linked files
@@ -58,108 +58,117 @@ def foss_license_compliance_check(linked_files, d):
         file_extension = linked_file.get_extension()
 
         #Check if the file is in list of approved files
-        if linked_file.get_name() in approved_file_names:
-            #Check if the checksum of the file is not changed
-                #If the checksum is changed, log a warning and add file to the list of files to be checked again
+        if linked_file.get_path() in approved_file_paths:
 
-            #Otherwise, ignore it
-            pass
+            #Get instance of the correpsonding approved file
+            for file in approved_files:
+                if file.get_path() == linked_file.get_path():
+                    target_approved_file = file
+                    break
+
+            #Check if the checksum of the file is changed as compared to the previous run
+            if target_approved_file.get_checksum() != linked_file.get_checksum():
+                #If the checksum is changed, log a warning and add file to the list of files to be checked again
+                recipe_config_object.add_message("Warning: File [%s] has changed since last run. Previous checksum: [%s], Current checksum: [%s]. Please help to check and update the approved file list accordingly." % (linked_file.get_path(), target_approved_file.get_checksum(), linked_file.get_checksum()))
+            else:
+                #If the checksum is not changed, do nothing
+                continue
 
         #else if the file is in the list of files to be checked
-        elif linked_file.get_name() in files_to_be_checked_names:
+        elif linked_file.get_path() in files_to_be_checked_paths:
             #Check if the file has strict license
             if file_license in strict_licenses:
                 #Check if the file has linking status of "strong static", "duplicate strong static", "weak static", "dynamic" or file is a header file
                 if file_linking_status == "strong static":
-                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s] with strong linking status [%s]. Please help to check and add this file to approved list accordingly." % (linked_file.get_name(), file_license, file_linking_status))
+                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s] with strong linking status [%s]. Please help to check and add this file to approved list accordingly." % (linked_file.get_path(), file_license, file_linking_status))
 
                 elif file_linking_status == "duplicate strong static":
-                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s] with duplicate linking status [%s]. Please help to check if file is really linked to the build and add it to approved list accordingly." % (linked_file.get_name(), file_license, file_linking_status))
+                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s] with duplicate linking status [%s]. Please help to check if file is really linked to the build and add it to approved list accordingly." % (linked_file.get_path(), file_license, file_linking_status))
 
                 elif file_linking_status == "weak static":
-                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s] with weak linking status [%s]. Please help to check if file is really linked to the build and add this file to approved list accordingly." % (linked_file.get_name(), file_license, file_linking_status))
+                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s] with weak linking status [%s]. Please help to check if file is really linked to the build and add this file to approved list accordingly." % (linked_file.get_path(), file_license, file_linking_status))
 
                 elif file_linking_status == "dynamic":
-                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s] with linking status [%s]. Please help to check and add this file to approved list accordingly." % (linked_file.get_name(), file_license, file_linking_status))
+                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s] with linking status [%s]. Please help to check and add this file to approved list accordingly." % (linked_file.get_path(), file_license, file_linking_status))
 
                 elif file_extension == ".h":
-                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s]  and is a header file. Please help to check if this file is included in your build and add this file to approved list accordingly." % (linked_file.get_name(), file_license))
+                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s]  and is a header file. Please help to check if this file is included in your build and add this file to approved list accordingly." % (linked_file.get_path(), file_license))
                 
                 else:
-                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s] but linking status is unknown. Please help to check and add this file to approved list accordingly." % (linked_file.get_name(), file_license))
+                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s] but linking status is unknown. Please help to check and add this file to approved list accordingly." % (linked_file.get_path(), file_license))
 
             #Check if the file has half-strict license
             elif file_license in half_strict_licenses:
                 #Check if the file has linking status of "strong static", "duplicate strong static", "weak static" or file is a header file
                 if file_linking_status == "strong static":
-                    recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] with strong linking status [%s]. Please help to check and add this file to approved list accordingly." % (linked_file.get_name(), file_license, file_linking_status))
+                    recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] with strong linking status [%s]. Please help to check and add this file to approved list accordingly." % (linked_file.get_path(), file_license, file_linking_status))
 
                 elif file_linking_status == "duplicate strong static":
-                    recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] with duplicate linking status [%s]. Please help to check if file is really linked to the build and add it to approved list accordingly." % (linked_file.get_name(), file_license, file_linking_status))
+                    recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] with duplicate linking status [%s]. Please help to check if file is really linked to the build and add it to approved list accordingly." % (linked_file.get_path(), file_license, file_linking_status))
 
                 elif file_linking_status == "weak static":
-                    recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] with weak linking status [%s]. Please help to check if file is really linked to the build and add this file to approved list accordingly." % (linked_file.get_name(), file_license, file_linking_status))
+                    recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] with weak linking status [%s]. Please help to check if file is really linked to the build and add this file to approved list accordingly." % (linked_file.get_path(), file_license, file_linking_status))
 
                 elif file_extension == ".h":
-                    recipe_config_object.add_message("Warning: File [%s] has half strict license [%s]  and is a header file. Please help to check if this file is included in your build and add this file to approved list accordingly." % (linked_file.get_name(), file_license))
+                    recipe_config_object.add_message("Warning: File [%s] has half strict license [%s]  and is a header file. Please help to check if this file is included in your build and add this file to approved list accordingly." % (linked_file.get_path(), file_license))
 
                 else:
-                    recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] but linking status is unknown. Please help to check and add this file to approved list accordingly." % (linked_file.get_name(), file_license))
+                    recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] but linking status is unknown. Please help to check and add this file to approved list accordingly." % (linked_file.get_path(), file_license))
             else:
                 #Log a warning that the file has unknown license
-                recipe_config_object.add_message("Warning: File [%s] has unknown license [%s]. Please help to define it in the common FOSS configuration file." % (linked_file.get_name(), file_license))
+                recipe_config_object.add_message("Warning: File [%s] has unknown license [%s]. Please help to define it in the common FOSS configuration file." % (linked_file.get_path(), file_license))
 
         #else if the file is not yet in the list of files to be checked and not in the list of approved files (normally the first run or new recipe added)
-        elif linked_file.get_name() not in approved_file_names and linked_file.get_name() not in files_to_be_checked_names:
+        elif linked_file.get_path() not in approved_file_paths and linked_file.get_path() not in files_to_be_checked_paths:
 
             #Check if the file has strict license
             if file_license in strict_licenses:
                 #Check if the file has linking status of "strong static", "duplicate strong static", "weak static", "dynamic" or file is a header file
                 if file_linking_status == "strong static":
-                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s] with strong linking status [%s]. Please help to check and add this file to approved list accordingly." % (linked_file.get_name(), file_license, file_linking_status))
+                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s] with strong linking status [%s]. Please help to check and add this file to approved list accordingly." % (linked_file.get_path(), file_license, file_linking_status))
                     recipe_config_object.add_file_to_be_checked(linked_file)
 
                 elif file_linking_status == "duplicate strong static":
-                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s] with duplicate linking status [%s]. Please help to check if file is really linked to the build and add it to approved list accordingly." % (linked_file.get_name(), file_license, file_linking_status))
+                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s] with duplicate linking status [%s]. Please help to check if file is really linked to the build and add it to approved list accordingly." % (linked_file.get_path(), file_license, file_linking_status))
                     recipe_config_object.add_file_to_be_checked(linked_file)
 
                 elif file_linking_status == "weak static":
-                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s] with weak linking status [%s]. Please help to check if file is really linked to the build and add this file to approved list accordingly." % (linked_file.get_name(), file_license, file_linking_status))
+                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s] with weak linking status [%s]. Please help to check if file is really linked to the build and add this file to approved list accordingly." % (linked_file.get_path(), file_license, file_linking_status))
                     recipe_config_object.add_file_to_be_checked(linked_file)
 
                 elif file_linking_status == "dynamic":
-                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s] with linking status [%s]. Please help to check and add this file to approved list accordingly." % (linked_file.get_name(), file_license, file_linking_status))
+                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s] with linking status [%s]. Please help to check and add this file to approved list accordingly." % (linked_file.get_path(), file_license, file_linking_status))
                     recipe_config_object.add_file_to_be_checked(linked_file)
 
                 elif file_extension == ".h":
-                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s]  and is a header file. Please help to check if this file is included in your build and add this file to approved list accordingly." % (linked_file.get_name(), file_license))
+                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s]  and is a header file. Please help to check if this file is included in your build and add this file to approved list accordingly." % (linked_file.get_path(), file_license))
                     recipe_config_object.add_file_to_be_checked(linked_file)
                 
                 else:
-                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s] but linking status is unknown. Please help to check and add this file to approved list accordingly." % (linked_file.get_name(), file_license))
+                    recipe_config_object.add_message("Warning: File [%s] has strict license [%s] but linking status is unknown. Please help to check and add this file to approved list accordingly." % (linked_file.get_path(), file_license))
                     recipe_config_object.add_file_to_be_checked(linked_file)
 
             #Check if the file has half-strict license
             elif file_license in half_strict_licenses:
                 #Check if the file has linking status of "strong static", "duplicate strong static", "weak static" or file is a header file
                 if file_linking_status == "strong static":
-                    recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] with strong linking status [%s]. Please help to check and add this file to approved list accordingly." % (linked_file.get_name(), file_license, file_linking_status))
+                    recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] with strong linking status [%s]. Please help to check and add this file to approved list accordingly." % (linked_file.get_path(), file_license, file_linking_status))
                     recipe_config_object.add_file_to_be_checked(linked_file)
 
                 elif file_linking_status == "duplicate strong static":
-                    recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] with duplicate linking status [%s]. Please help to check if file is really linked to the build and add it to approved list accordingly." % (linked_file.get_name(), file_license, file_linking_status))
+                    recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] with duplicate linking status [%s]. Please help to check if file is really linked to the build and add it to approved list accordingly." % (linked_file.get_path(), file_license, file_linking_status))
                     recipe_config_object.add_file_to_be_checked(linked_file)
 
                 elif file_linking_status == "weak static":
-                    recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] with weak linking status [%s]. Please help to check if file is really linked to the build and add this file to approved list accordingly." % (linked_file.get_name(), file_license, file_linking_status))
+                    recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] with weak linking status [%s]. Please help to check if file is really linked to the build and add this file to approved list accordingly." % (linked_file.get_path(), file_license, file_linking_status))
                     recipe_config_object.add_file_to_be_checked(linked_file)
 
                 elif file_extension == ".h":
-                    recipe_config_object.add_message("Warning: File [%s] has half strict license [%s]  and is a header file. Please help to check if this file is included in your build and add this file to approved list accordingly." % (linked_file.get_name(), file_license))
+                    recipe_config_object.add_message("Warning: File [%s] has half strict license [%s]  and is a header file. Please help to check if this file is included in your build and add this file to approved list accordingly." % (linked_file.get_path(), file_license))
                     recipe_config_object.add_file_to_be_checked(linked_file)
 
                 else:
-                    recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] but linking status is unknown. Please help to check and add this file to approved list accordingly." % (linked_file.get_name(), file_license))
+                    recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] but linking status is unknown. Please help to check and add this file to approved list accordingly." % (linked_file.get_path(), file_license))
                     recipe_config_object.add_file_to_be_checked(linked_file)
 
             #Check if the file has open license
@@ -169,11 +178,11 @@ def foss_license_compliance_check(linked_files, d):
             
             else:
                 #Log a warning that the file has unknown license
-                recipe_config_object.add_message("Warning: File [%s] has unknown license [%s]. Please help to define it in the common FOSS configuration file." % (linked_file.get_name(), file_license))
+                recipe_config_object.add_message("Warning: File [%s] has unknown license [%s]. Please help to define it in the common FOSS configuration file." % (linked_file.get_path(), file_license))
                 recipe_config_object.add_file_to_be_checked(linked_file)
         else:
             #Log fatal error and stop the process
-            bb.fatal("FOSS license compliance check failed: File [%s] is not defined. This should not happen." % (linked_file.get_name()))
+            bb.fatal("FOSS license compliance check failed: File [%s] is not defined. This should not happen." % (linked_file.get_path()))
             pass
 
     #Warn the user to check for the log file if log file buffer and update the recipe config file
