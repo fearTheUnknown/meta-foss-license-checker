@@ -379,6 +379,24 @@ def __generate_strong_static_linked_libs(libs_to_compare,libs_to_be_compared,d):
             else:
                 #TODO: Handle other types of files, simply extract symbols of functions and variables of the file
                 pass
+    
+    #Refine the duplicate symbols of strong static linked libs
+    duplicate_strong_static_linked_libs = [lib for lib in strong_static_linked_libs if lib.get_duplicate_linked_symbols() != {}]
+
+    for duplicate_strong_static_linked_lib in duplicate_strong_static_linked_libs:
+        #Get duplicated symbols
+        duplicated_symbols = duplicate_strong_static_linked_lib.get_duplicate_linked_symbols()
+
+        #For each duplicated symbol
+        for symbol_name in duplicated_symbols.keys():
+            #Get the list of files which report this duplicated symbol
+            report_files = duplicated_symbols[symbol_name]['reported_by']
+
+            #For each file which report this symbol
+            for report_file_name in report_files.keys():
+                #Convert duplicate_files from real object into a list of file paths
+                report_files[report_file_name]['duplicate_files'] = [file.get_path() for file in report_files[report_file_name]['duplicate_files'].values()]
+
             
     return strong_static_linked_libs
 
