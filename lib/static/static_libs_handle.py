@@ -411,6 +411,10 @@ def __generate_linked_libs(libs_to_compare,libs_to_be_compared,d):
     #Combine 2 lists into a list of linked libs
     static_linked_libs = strong_static_linked_libs + weak_static_linked_libs
 
+    #Clear symbol table of all static linked libs
+    for lib in static_linked_libs:
+        lib.set_symbol_table(symbolTable={})
+
     #Return the linked libs
     return static_linked_libs
 
