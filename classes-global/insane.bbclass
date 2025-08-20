@@ -967,21 +967,21 @@ package_qa_check_rdepends[vardepsexclude] = "OVERRIDES"
 
 
 def package_qa_check_license_compliance(pkgs, pkgfiles, d):
-    from static.static_libs_handle import generate_static_linking_list
-    from dynamic.shared_libs_handle import generate_dynamic_linking_list
-    from foss.foss_compliance_checker import foss_license_compliance_check
+    from static.static_libs_handle import StaticLinkedLibsGenerator
+    from dynamic.shared_libs_handle import DynamicLinkedLibsGenerator
+    from foss.foss_compliance_checker import FossComplianceChecker
     
     #Get list of statically linked files in the current recipe
-    static_linking_files = generate_static_linking_list(pkgfiles, d)
+    static_linking_files = StaticLinkedLibsGenerator(pkgfiles, d).generate()
 
     #Get list of dynamically linked files in the current recipe
-    dynamic_linking_files = generate_dynamic_linking_list(pkgfiles, d)
+    dynamic_linking_files = DynamicLinkedLibsGenerator(pkgfiles, d).generate()
 
     #Combine both static and dynamic linked files
     linked_libs = static_linking_files + dynamic_linking_files
 
     #Apply the FOSS license check algorithm on list of linked libs
-    foss_license_compliance_check(linked_libs, d)
+    FossComplianceChecker(d=d).run(linked_libs)
 
 def package_qa_check_deps(pkg, pkgdest, d):
 
