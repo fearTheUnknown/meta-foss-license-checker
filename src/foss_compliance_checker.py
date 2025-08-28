@@ -1,4 +1,4 @@
-from foss.foss_config import *
+from lib.foss_config import *
 
 class FossComplianceChecker:
     def __init__(self, d):

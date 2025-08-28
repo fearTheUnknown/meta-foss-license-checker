@@ -967,9 +967,9 @@ package_qa_check_rdepends[vardepsexclude] = "OVERRIDES"
 
 
 def package_qa_check_license_compliance(pkgs, pkgfiles, d):
-    from static.static_libs_handle import StaticLinkedLibsGenerator
-    from dynamic.shared_libs_handle import DynamicLinkedLibsGenerator
-    from foss.foss_compliance_checker import FossComplianceChecker
+    from lib.linked_lib_generator import StaticLinkedLibsGenerator
+    from lib.linked_lib_generator import DynamicLinkedLibsGenerator
+    from foss_compliance_checker import FossComplianceChecker
     
     #Get list of statically linked files in the current recipe
     static_linking_files = StaticLinkedLibsGenerator(pkgfiles, d).generate()

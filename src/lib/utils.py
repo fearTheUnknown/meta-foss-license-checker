@@ -1,9 +1,26 @@
 import subprocess
-from file import *
+from lib.file import *
 import json
 import fnmatch
 import oe.package
 import hashlib
+
+def explode_libs(s):
+
+    lib_list = s.split()
+
+    def remove_parentheses(s):
+        while '(' in s and ')' in s:
+            start = s.find('(')
+            end = s.find(')', start)
+            if end == -1:
+                break
+            s = s[:start] + s[end+1:]
+        return s
+    
+    return_list = [remove_parentheses(lib) for lib in lib_list]
+
+    return return_list
 
 # Return type (bits):
 # 0 - not elf
