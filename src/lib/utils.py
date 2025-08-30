@@ -388,8 +388,19 @@ def __create_symbol_table(file_path, d):
 
     return symbol_table
 
-def generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
-    elf_readable_list = []
+def convert_to_list_of_readable_object_files(file_paths=[], d=None):
+    """Convert given file paths into Python objects for easy access and processing.
+
+    Keyword Arguments:
+        file_paths -- List of file paths to be converted into objects (default: {[]})
+        d -- datastore of Yocto build system (default: {None})
+
+    Returns:
+        List of readable objects in Python of the given list of file paths
+    """    
+    
+    #Initialize object file list
+    readable_object_file_list = []
 
     #Loop through each file path in the package
     for file_path in file_paths:
@@ -417,7 +428,7 @@ def generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
                                    license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={}, checksum=checksum)
 
             #Add shared lib object to the list
-            elf_readable_list.append(shared_lib)
+            readable_object_file_list.append(shared_lib)
 
         #Check if file is an ELF executable
         elif (file_type & 1) and (file_type & 4):
@@ -431,7 +442,7 @@ def generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
                                     license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={}, checksum=checksum)
 
             #Add file to the list
-            elf_readable_list.append(executable)
+            readable_object_file_list.append(executable)
         
         #Check if file is an object file
         elif (file_type & 1) and (file_type & 32):
@@ -445,7 +456,7 @@ def generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
                                      license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={}, checksum=checksum)
 
             #Add object file object to the list
-            elf_readable_list.append(object_file)
+            readable_object_file_list.append(object_file)
         
         #Check if file is an AR archive (static library)
         elif (file_type & 64):
@@ -459,7 +470,7 @@ def generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
                                    license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={}, checksum=checksum)
 
             #Add static lib object to the list
-            elf_readable_list.append(static_lib)
+            readable_object_file_list.append(static_lib)
         
         #Check if file is a C header file
         elif file_type == 0 and file_extension == '.h':
@@ -470,13 +481,16 @@ def generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
                                      license='', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}, checksum=checksum)
             
             #Add header file to the list
-            elf_readable_list.append(header_file)
+            readable_object_file_list.append(header_file)
         
         else:
             #If file is not among predefined file types above, ignore it
             pass
-    
-    return elf_readable_list
+
+    #Add meta info to list of generated object files
+    add_info_from_pkgdata_dir(files=readable_object_file_list, d=d)
+
+    return readable_object_file_list
 
 
 def add_info_from_pkgdata_dir(files, d):

@@ -55,10 +55,7 @@ class DynamicLinkedLibsGenerator(LinkedLibsGenerator):
                         bb.warn("Cannot detect file type of the shared lib: %s" % file_path)
 
         #Create a list of shared libs located in the RECIPE_SYSROOT
-        recipe_sysroot_linked_shared_libs = generate_list_of_shared_libs_and_executables(file_paths=recipe_sysroot_linked_shared_lib_paths, d=self.m_d)
-
-        #Add from package, from recipe and license information to each shared lib
-        add_info_from_pkgdata_dir(recipe_sysroot_linked_shared_libs, d=self.m_d)
+        recipe_sysroot_linked_shared_libs = convert_to_list_of_readable_object_files(file_paths=recipe_sysroot_linked_shared_lib_paths, d=self.m_d)
 
         #Set attributes for each linked shared lib
         for lib in recipe_sysroot_linked_shared_libs:
@@ -609,23 +606,16 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
         if debug_pkg_name is not None:
             #Create a list of shared libs and executables located inside the debug package of the recipe
             debug_file_paths = pkgfiles[debug_pkg_name]
+            debug_shared_libs_and_executables = convert_to_list_of_readable_object_files(file_paths=debug_file_paths, d=d)
 
-            debug_shared_libs_and_executables = generate_list_of_shared_libs_and_executables(file_paths=debug_file_paths, d=d)
-
-            #Add from package, from recipe and license information to each shared lib and executable
-            add_info_from_pkgdata_dir(debug_shared_libs_and_executables, d)
-
-            #Create a list of static libs located in the RECIPE_SYSROOT directory
+            #Create a list of static libs, object files located in the RECIPE_SYSROOT directory
             recipe_sysroot_file_paths = []
             for root, dirs, files in os.walk(recipe_sysroot):
                 for file in files:
                     if file.endswith('.a') or file.endswith('.o'):
                         recipe_sysroot_file_paths.append(os.path.join(root, file))
             
-            recipe_sysroot_static_libs_and_executables = generate_list_of_shared_libs_and_executables(file_paths=recipe_sysroot_file_paths, d=d)
-
-            #Add from package, from recipe and license information to each static lib and executable
-            add_info_from_pkgdata_dir(recipe_sysroot_static_libs_and_executables, d)
+            recipe_sysroot_static_libs_and_executables = convert_to_list_of_readable_object_files(file_paths=recipe_sysroot_file_paths, d=d)
 
             #Perform the symbol compare to identify which static libs might be linked and set the linking status accordingly
             linked_libs = self.__generate_linked_libs_with_symbol_comparison(debug_shared_libs_and_executables, recipe_sysroot_static_libs_and_executables, d)
@@ -649,9 +639,6 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                     recipe_sysroot_file_paths.append(os.path.join(root, file))
         
         #Generate a list of header files in the RECIPE_SYSROOT directory
-        recipe_sysroot_header_files = generate_list_of_shared_libs_and_executables(file_paths=recipe_sysroot_file_paths, d=d)
-
-        #Add from package, from recipe and license information to each header file
-        add_info_from_pkgdata_dir(recipe_sysroot_header_files, d)
+        recipe_sysroot_header_files = convert_to_list_of_readable_object_files(file_paths=recipe_sysroot_file_paths, d=d)
 
         return recipe_sysroot_header_files
