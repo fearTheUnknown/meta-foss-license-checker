@@ -494,6 +494,11 @@ def convert_to_list_of_readable_object_files(file_paths=[], d=None):
 
 
 def add_info_from_pkgdata_dir(files, d):
+    """Update info of package, recipe and license for each file in the given file list of the recipe.
+    Arguments:
+        files -- List of files to be updated
+        d -- datastore of Yocto build system
+    """    
 
     #Get base directories where metadata of files are accessible
     pkgdest_dir_path = d.getVar('PKGDEST')
