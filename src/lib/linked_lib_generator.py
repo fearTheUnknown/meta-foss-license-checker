@@ -606,16 +606,29 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
         return static_linked_libs
 
     def __generate_list_of_statically_linked_libs(self, pkgfiles, d):
+        """_summary_
+
+        Arguments:
+            pkgfiles -- Dictionary of files in each packages
+            d -- datastore of Yocto build system
+
+        Returns:
+            A list of potentially linked static libraries. Empty list [] if no linked static libraries found.
+        """        
+        #Get path to recipe-sysroot of the target recipe
         recipe_sysroot = d.getVar('RECIPE_SYSROOT')
+
+        #Initialize empty list of linked libraries
         linked_libs = []
 
-        #Look for debug package in the recipe
+        #Look for debug package in packages-split of the recipe since it is the package where output binaries are not stripped
         debug_pkg_name = None
         for pkg in pkgfiles.keys():
             if pkg.endswith('-dbg'):
                 debug_pkg_name = pkg
                 break
         
+        #Check if the recipe does have debug package
         if debug_pkg_name is not None:
             #Create a list of shared libs and executables located inside the debug package of the recipe
             debug_file_paths = pkgfiles[debug_pkg_name]
