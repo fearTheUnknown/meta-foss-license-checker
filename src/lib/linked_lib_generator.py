@@ -158,8 +158,16 @@ class DynamicLinkedLibsGenerator(LinkedLibsGenerator):
         return linked_libs
 
 class StaticLinkedLibsGenerator(LinkedLibsGenerator):
+    """Generator of static linked libraries
+    """    
 
     def __init__(self, pkgfiles, d):
+        """Constructor
+
+        Arguments:
+            pkgfiles -- Dictionary of files in each packages
+            d -- datastore of Yocto build system
+        """        
         self.m_pkgfiles = pkgfiles
         self.m_d = d
     
