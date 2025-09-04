@@ -590,10 +590,10 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
 
     def __generate_linked_libs_with_symbol_comparison(self, libs_to_compare, libs_to_be_compared, d):
         #Get a list of libs with strong static linking
-        strong_static_linked_libs = self.__generate_strong_static_linked_libs(libs_to_compare, libs_to_be_compared, d)
+        strong_static_linked_libs = self.__generate_strong_static_linked_libs(package_libs_and_executables, recipe_sysroot_libs_and_executables, d)
 
         #Get a list of libs with weak static linking (libs with strong static linking are excluded in this list)
-        weak_static_linked_libs = self.__generate_weak_static_linked_libs(libs_to_compare, libs_to_be_compared, d)
+        weak_static_linked_libs = self.__generate_weak_static_linked_libs(package_libs_and_executables, recipe_sysroot_libs_and_executables, d)
 
         #Combine 2 lists into a list of linked libs
         static_linked_libs = strong_static_linked_libs + weak_static_linked_libs
