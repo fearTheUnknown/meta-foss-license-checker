@@ -172,6 +172,11 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
         self.m_d = d
     
     def generate(self):
+        """Generate a list of static linked libraries
+
+        Returns:
+            A list of potentially linked static libraries and linked header files
+        """        
         #Create list of linked static libs
         linked_static_libs = self.__generate_list_of_statically_linked_libs(self.m_pkgfiles, self.m_d)
 
