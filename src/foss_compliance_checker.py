@@ -10,7 +10,7 @@ class FossComplianceChecker:
 
             layer_dir = self.m_d.getVar('LAYERDIR_WS')
             foss_config_dir = os.path.join(layer_dir, 'tool-config')
-            recipe_config_dir = os.path.join(layer_dir, 'recipe-config')
+            recipe_config_dir = os.path.join(layer_dir, 'recipes-config')
             log_dir = os.path.join(layer_dir, 'logs')
             recipe_name = self.m_d.getVar('PN')
 
