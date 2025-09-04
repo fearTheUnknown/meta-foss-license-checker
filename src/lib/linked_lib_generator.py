@@ -588,7 +588,17 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
         return strong_static_linked_libs
 
 
-    def __generate_linked_libs_with_symbol_comparison(self, libs_to_compare, libs_to_be_compared, d):
+    def __generate_linked_libs_with_symbol_comparison(self, package_libs_and_executables, recipe_sysroot_libs_and_executables, d):
+        """Generate list of linked static libs and object files based on symbol comparison operation
+
+        Arguments:
+            package_libs_and_executables -- List of libraries, object files and executables of an output package directory
+            recipe_sysroot_libs_and_executables -- List of libraries, object files and executables located in recipe-sysroot of the recipe
+            d -- datastore of Yocto build system
+
+        Returns:
+            List of potential statically linked libraries, object files and executables in recipe-sysroot. Empty list [] if no linked static libraries found.
+        """        
         #Get a list of libs with strong static linking
         strong_static_linked_libs = self.__generate_strong_static_linked_libs(package_libs_and_executables, recipe_sysroot_libs_and_executables, d)
 
