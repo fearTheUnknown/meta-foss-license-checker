@@ -294,118 +294,138 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
 
         return weak_static_linked_libs
 
-    def __generate_strong_static_linked_libs(self, libs_to_compare, libs_to_be_compared, d):
+    def __generate_strong_static_linked_libs(self, package_libs_and_executables, recipe_sysroot_libs_and_executables, d):
+        """Generate list of linked static libs and object files with strong symbols
+
+        Arguments:
+            package_libs_and_executables -- List of libraries, object files and executables of an output package directory
+            recipe_sysroot_libs_and_executables -- List of libraries, object files and executables located in recipe-sysroot of the recipe
+            d -- datastore of Yocto build system
+
+        Returns:
+            List of potential statically linked libraries, object files and executables in recipe-sysroot with strong symbols. Empty list [] if no linked static libraries found.
+        """  
+
+        #Initialize list of static list with strong static linking or duplicate strong static linking
         strong_static_linked_libs = []
 
-        #For each file in libs_to_compare
-        for file_to_compare in libs_to_compare:
+        #For each package file in package_libs_and_executables
+        for package_file in package_libs_and_executables:
 
             #Creat list of previous strong linked symbols
             previous_strong_linked_symbols = {}
 
-            #Extract symbols of functions and variables with type FUNC/OBJECT, bind GLOBAL, visibility dont care, location is not UND
-            file_to_compare_symbol_table = file_to_compare.get_symbol_table()
-            symbols_to_compare = {}
-            for symbol_name in file_to_compare_symbol_table.keys():
-                if (file_to_compare_symbol_table[symbol_name]['type'] == 'FUNC' or file_to_compare_symbol_table[symbol_name]['type'] == 'OBJECT') and file_to_compare_symbol_table[symbol_name]['bind'] == 'GLOBAL' and file_to_compare_symbol_table[symbol_name]['location'] != 'UND':
-                    symbols_to_compare[symbol_name] = file_to_compare_symbol_table[symbol_name]
+            #Extract symbols of functions and variables in the package_file with type FUNC/OBJECT, bind GLOBAL, visibility dont care, location is not UND for comparison purpose
+            package_file_symbol_table = package_file.get_symbol_table()
+            package_file_symbols_for_comparison = {}
+            for symbol_name in package_file_symbol_table.keys():
+                if (package_file_symbol_table[symbol_name]['type'] == 'FUNC' or package_file_symbol_table[symbol_name]['type'] == 'OBJECT') and package_file_symbol_table[symbol_name]['bind'] == 'GLOBAL' and package_file_symbol_table[symbol_name]['location'] != 'UND':
+                    package_file_symbols_for_comparison[symbol_name] = package_file_symbol_table[symbol_name]
 
-            #For each file in libs_to_be_compared
-            for file_to_be_compared in libs_to_be_compared:
+            #For each file in recipe_sysroot_libs_and_executables
+            for recipe_sysroot_file in recipe_sysroot_libs_and_executables:
 
-                #Check if the file is a static lib
-                if isinstance(file_to_be_compared, StaticLib):
-                    file_to_be_compared_symbol_table = file_to_be_compared.get_symbol_table() #The file_to_be_compared_symbol_table is a dictionary of object files archived in the static lib
+                #Check if the file in recipe-sysroot is a static lib
+                if isinstance(recipe_sysroot_file, StaticLib):
+                    #Change name of recipe sysroot file to static lib for consistency
+                    static_lib = recipe_sysroot_file
 
-                    #If yes, for each object file in static lib
-                    for object_file_name in file_to_be_compared_symbol_table.keys():
+                    #Extract symbol table of the static lib
+                    static_lib_symbol_table = static_lib.get_symbol_table() #The static_lib_symbol_table is a dictionary of object files archived in the static lib
 
-                        is_strong_linking_found = False #Flag indicate that a strong symbol linking is found in this object file of the static lib under inspection
+                    #For each object file in static lib
+                    for object_file_name in static_lib_symbol_table.keys():
 
-                        #Extract symbols of functions and data objects with type FUNC/OBJECT, bind not LOCAL, visibility dont care, location is not UND
-                        object_file_symbols_to_be_compared = {}
-                        for symbol_name in file_to_be_compared_symbol_table[object_file_name].keys():
-                            if (file_to_be_compared_symbol_table[object_file_name][symbol_name]['type'] == 'FUNC' or file_to_be_compared_symbol_table[object_file_name][symbol_name]['type'] == 'OBJECT') and file_to_be_compared_symbol_table[object_file_name][symbol_name]['bind'] != 'LOCAL' and file_to_be_compared_symbol_table[object_file_name][symbol_name]['location'] != 'UND':
-                                object_file_symbols_to_be_compared[symbol_name] = file_to_be_compared_symbol_table[object_file_name][symbol_name]
+                        is_strong_linking_found = False #Flag indicate that a strong symbol linking is found in the current object file under inspection
 
-                        #Compare each symbol from symbols_to_compare to object_file_symbols_to_be_compared from the object file of the current static lib
-                        for symbol_to_compare_name in symbols_to_compare.keys():
+                        #Extract symbols of functions and data objects of the object file with type FUNC/OBJECT, bind not LOCAL, visibility dont care, location is not UND for comparison
+                        object_file_symbols = {}
+                        for symbol_name in static_lib_symbol_table[object_file_name].keys():
+                            if (static_lib_symbol_table[object_file_name][symbol_name]['type'] == 'FUNC' or static_lib_symbol_table[object_file_name][symbol_name]['type'] == 'OBJECT') and static_lib_symbol_table[object_file_name][symbol_name]['bind'] != 'LOCAL' and static_lib_symbol_table[object_file_name][symbol_name]['location'] != 'UND':
+                                object_file_symbols[symbol_name] = static_lib_symbol_table[object_file_name][symbol_name]
 
-                            #If there is a symbol match
-                            if symbol_to_compare_name in object_file_symbols_to_be_compared.keys():
+                        #Compare each symbol from package_file_symbols_for_comparison to object_file_symbols of the object file inside the static lib
+                        for package_file_symbol in package_file_symbols_for_comparison.keys():
 
-                                #If the object file symbol is WEAK
-                                if object_file_symbols_to_be_compared[symbol_to_compare_name]['bind'] == 'WEAK':
-                                    #Ignore it, no strong linking can happen with weak symbols
+                            #If there is a symbol match, let determine what kind of symbol it is
+                            if package_file_symbol in object_file_symbols.keys():
+
+                                #If the matched symbol with object file is WEAK
+                                if object_file_symbols[package_file_symbol]['bind'] == 'WEAK':
+                                    #Ignore it, no strong linking can happen with a weak symbol of the object file , this case is going to be handle by other functions
+                                    #Continue with the next package_file_symbol
                                     pass
 
-                                #else if the object file symbol is in previous_strong_linked_symbols
-                                elif symbol_to_compare_name in previous_strong_linked_symbols.keys():
-                                    #Get the duplicated strong symbols of the current static lib
-                                    file_to_be_compared_duplicate_symbols = file_to_be_compared.get_duplicate_linked_symbols()
+                                #else if the matched symbol is in the list of previous strong linked symbols. This means that the symbol is already found in some static libs or object files before
+                                elif package_file_symbol in previous_strong_linked_symbols.keys():
+                                    #Get list of duplicated strong symbols of the current static lib
+                                    static_lib_duplicate_symbol_table = static_lib.get_duplicate_linked_symbols()
 
-                                    #Get file path of the file to compare
-                                    file_to_compare_path = file_to_compare.get_path()
+                                    #Get file path of the package file
+                                    package_file_path = package_file.get_path()
 
                                     #Set linking status of the current static lib to "duplicate strong static"
-                                    file_to_be_compared.set_link_status('duplicate strong static')
+                                    static_lib.set_link_status('duplicate strong static')
 
-                                    #Add duplicate symbol to file_to_be_compared_duplicate_symbols
-                                    if symbol_to_compare_name not in file_to_be_compared_duplicate_symbols.keys():
-                                        #If the duplicate symbol is not already recorded as duplicate symbol before, it is then created now for this lib
-                                        file_to_be_compared_duplicate_symbols[symbol_to_compare_name] = {}
-                                        file_to_be_compared_duplicate_symbols[symbol_to_compare_name]['reported_by'] = {}
+                                    
+                                    #If the duplicate symbol is not recorded to duplicate symbols of the static lib before, record it now
+                                    if package_file_symbol not in static_lib_duplicate_symbol_table.keys():
+                                        #If not, add duplicate symbol to recipe_sysroot_file_duplicate_symbols
+                                        static_lib_duplicate_symbol_table[package_file_symbol] = {}
+                                        static_lib_duplicate_symbol_table[package_file_symbol]['reported_by'] = {}
                                     else:
                                         #Do nothing, the symbol is already recorded before
                                         pass
 
-                                    #Add the file_to_compare which report this duplicate symbol and a list of files which have the same duplicate symbol
-                                    if file_to_compare_path not in file_to_be_compared_duplicate_symbols[symbol_to_compare_name]['reported_by'].keys():
-                                        file_to_be_compared_duplicate_symbols[symbol_to_compare_name]['reported_by'][file_to_compare_path] = {}
-                                        file_to_be_compared_duplicate_symbols[symbol_to_compare_name]['reported_by'][file_to_compare_path]['duplicate_files'] = previous_strong_linked_symbols[symbol_to_compare_name]
+                                    #Check if the package file which reports the duplicate symbol is added before
+                                    if package_file_path not in static_lib_duplicate_symbol_table[package_file_symbol]['reported_by'].keys():
+                                        #If not, add the package file which reports the duplicate symbol and a list of files which have the same duplicate symbol
+                                        static_lib_duplicate_symbol_table[package_file_symbol]['reported_by'][package_file_path] = {}
+                                        static_lib_duplicate_symbol_table[package_file_symbol]['reported_by'][package_file_path]['duplicate_files'] = previous_strong_linked_symbols[package_file_symbol]
                                     else:
-                                        #If the file_to_compare is already recorded as reporting this duplicate symbol, do nothing to avoid overwriting
+                                        #If the report package file is already added before, do nothing to avoid overwriting
                                         pass
 
-                                    #Set linking status of all libs corresponding to the same strong symbol in previous_strong_linked_symbols to "duplicate strong static" and create the corresponding duplicate symbols also
-                                    for linked_lib in previous_strong_linked_symbols[symbol_to_compare_name].values():
-                                        #Set linking status of the linked lib to "duplicate strong static"
-                                        linked_lib.set_link_status('duplicate strong static')
+                                    #Update all previously linked files, static libs or object files, which share the same duplicate symbol
+                                    for previous_recipe_sysroot_file in previous_strong_linked_symbols[package_file_symbol].values():
 
-                                        #Get the duplicate symbols of the linked lib
-                                        linked_lib_duplicate_symbols = linked_lib.get_duplicate_linked_symbols()
+                                        #Set linking status of the linked file to "duplicate strong static"
+                                        previous_recipe_sysroot_file.set_link_status('duplicate strong static')
 
-                                        #The steps below are the same as steps above which used to create a list of duplicate symbols
-                                        #We have to manually repeat these 2 steps to ensure that we are actually appending the new reporter to the  duplicate symbols of the linked lib
-                                        #Setting the duplicate linked symbols using the method "set_duplicate_linked_symbols" is replacing the whole duplicate symbols of the linked lib, which is not what we want
+                                        #Get the duplicate symbols of the linked file
+                                        previous_recipe_sysroot_file_duplicate_symbol_table = previous_recipe_sysroot_file.get_duplicate_linked_symbols()
 
-                                        #Add the duplicate symbol to the linked lib
-                                        if symbol_to_compare_name not in linked_lib_duplicate_symbols.keys():
-                                            #If the duplicate symbol is not already recorded as duplicate symbol before, it is then created now for this lib
-                                            linked_lib_duplicate_symbols[symbol_to_compare_name] = {}
-                                            linked_lib_duplicate_symbols[symbol_to_compare_name]['reported_by'] = {}
+                                        #Check if the duplicate symbol is recorded to duplicate symbol table of the linked file
+                                        if package_file_symbol not in previous_recipe_sysroot_file_duplicate_symbol_table.keys():
+                                            #If not, add duplicate symbol to the duplicate symbol table of the linked file
+                                            previous_recipe_sysroot_file_duplicate_symbol_table[package_file_symbol] = {}
+                                            previous_recipe_sysroot_file_duplicate_symbol_table[package_file_symbol]['reported_by'] = {}
                                         else:
                                             #Do nothing, the symbol is already recorded before
                                             pass
 
-                                        #Add the file_to_compare which report this duplicate symbol and a list of files which have the same duplicate symbol
-                                        if file_to_compare_path not in linked_lib_duplicate_symbols[symbol_to_compare_name]['reported_by'].keys():
-                                            linked_lib_duplicate_symbols[symbol_to_compare_name]['reported_by'][file_to_compare_path] = {}
-                                            linked_lib_duplicate_symbols[symbol_to_compare_name]['reported_by'][file_to_compare_path]['duplicate_files'] = previous_strong_linked_symbols[symbol_to_compare_name]
+                                        #Check if the package file which reports the duplicate symbol is added to the duplicate symbol table of the linked file
+                                        if package_file_path not in previous_recipe_sysroot_file_duplicate_symbol_table[package_file_symbol]['reported_by'].keys():
+                                            #If not, add the package file which reports the duplicate symbol and a list of files which have the same duplicate symbol
+                                            previous_recipe_sysroot_file_duplicate_symbol_table[package_file_symbol]['reported_by'][package_file_path] = {}
+                                            previous_recipe_sysroot_file_duplicate_symbol_table[package_file_symbol]['reported_by'][package_file_path]['duplicate_files'] = previous_strong_linked_symbols[package_file_symbol]
                                         else:
-                                            #If the file_to_compare is already recorded as reporting this duplicate symbol, do nothing to avoid overwriting
+                                            #If the report package file is already added before, do nothing to avoid overwriting
                                             pass
 
-                                    #Add the current static lib to the corresponding symbol in previous_strong_linked_symbols also
-                                    previous_strong_linked_symbols[symbol_to_compare_name][file_to_be_compared.get_name()] = file_to_be_compared
+                                    #Update the linked file in recipe-sysroot directory with duplicate symbol to previous_strong_linked_symbols for future reference
+                                    previous_strong_linked_symbols[package_file_symbol][static_lib.get_name()] = static_lib
 
-                                    #Get file path list of libs in strong_static_linked_libs
+                                    #Get file paths of all linked static files
                                     strong_static_linked_libs_paths = [lib.get_path() for lib in strong_static_linked_libs]
 
-                                    #Add the current static lib to the strong_static_linked_libs if the current static lib is not already in the list
-                                    file_to_be_compared_path = file_to_be_compared.get_path()
-                                    if file_to_be_compared_path not in strong_static_linked_libs_paths:
-                                        strong_static_linked_libs.append(file_to_be_compared)
+                                    #Get file path of linked static lib with duplicate symbol
+                                    static_lib_path = static_lib.get_path()
+
+                                    #Check if the linked static lib is not added to list of linked static files before
+                                    if static_lib_path not in strong_static_linked_libs_paths:
+                                        #If yes, update the linked static lib to list of linked static files
+                                        strong_static_linked_libs.append(static_lib)
 
                                     #Set the flag to indicate that strong linking is found
                                     is_strong_linking_found = True
@@ -413,22 +433,23 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                     #Break out since there is no need to check for other symbols in symbols_to_compare
                                     break
 
-                                #else if the object file symbol is not WEAK and is not in previous_strong_linked_symbols
-                                elif object_file_symbols_to_be_compared[symbol_to_compare_name]['bind'] != 'WEAK' and symbol_to_compare_name not in previous_strong_linked_symbols.keys():
+                                #else if the matched symbol with object file is not WEAK and is not among previous strong linked symbols
+                                elif object_file_symbols[package_file_symbol]['bind'] != 'WEAK' and package_file_symbol not in previous_strong_linked_symbols.keys():
                                     #Set linking status of the static lib to "strong static"
-                                    file_to_be_compared.set_link_status('strong static')
+                                    static_lib.set_link_status('strong static')
 
-                                    #Add the symbol to previous_strong_linked_symbols with reference to the corresponding static lib
-                                    previous_strong_linked_symbols[symbol_to_compare_name] = {}
-                                    previous_strong_linked_symbols[symbol_to_compare_name][file_to_be_compared.get_name()] = file_to_be_compared
+                                    #Update the symbol to previous_strong_linked_symbols along with its reference to the corresponding static lib
+                                    previous_strong_linked_symbols[package_file_symbol] = {}
+                                    previous_strong_linked_symbols[package_file_symbol][static_lib.get_name()] = static_lib
 
-                                    #Get file path list of libs in strong_static_linked_libs
+                                    #Get file paths of all linked static files
                                     strong_static_linked_libs_paths = [lib.get_path() for lib in strong_static_linked_libs]
 
-                                    #Add the current static lib to the strong_static_linked_libs if the current static lib is not already in the list
-                                    file_to_be_compared_path = file_to_be_compared.get_path()
-                                    if file_to_be_compared_path not in strong_static_linked_libs_paths:
-                                        strong_static_linked_libs.append(file_to_be_compared)
+                                    #Check if the linked static lib is not added to list of linked static files before
+                                    static_lib_path = static_lib.get_path()
+                                    if static_lib_path not in strong_static_linked_libs_paths:
+                                        #If yes, update the linked static lib to list of linked static files
+                                        strong_static_linked_libs.append(static_lib)
 
                                     #Set the flag to indicate that strong linking is found
                                     is_strong_linking_found = True
@@ -444,124 +465,128 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                         if is_strong_linking_found:
                             break
 
-                #Check if the file is an object file
-                elif isinstance(file_to_be_compared, ObjectFile):
+                #Check if the file in recipe-sysroot is an object file
+                elif isinstance(recipe_sysroot_file, ObjectFile):
+
+                    #Convert recipe sysroot file name to object file for consistency
+                    object_file = recipe_sysroot_file
                     
                     #Get symbol table of the object file
-                    file_to_be_compared_symbol_table = file_to_be_compared.get_symbol_table()
+                    object_file_symbol_table = object_file.get_symbol_table()
 
-                    #Extract symbols of functions and data objects with type FUNC/OBJECT, bind not LOCAL, visibility dont care, location is not UND
-                    object_file_symbols_to_be_compared = {}
-                    for symbol_name in file_to_be_compared_symbol_table.keys():
-                        if (file_to_be_compared_symbol_table[symbol_name]['type'] == 'FUNC' or file_to_be_compared_symbol_table[symbol_name]['type'] == 'OBJECT') and file_to_be_compared_symbol_table[symbol_name]['bind'] != 'LOCAL' and file_to_be_compared_symbol_table[symbol_name]['location'] != 'UND':
-                            object_file_symbols_to_be_compared[symbol_name] = file_to_be_compared_symbol_table[symbol_name]
+                    #Extract symbols of functions and data objects in the object file with type FUNC/OBJECT, bind not LOCAL, visibility dont care, location is not UND for comparison
+                    object_file_symbols_for_comparison = {}
+                    for symbol_name in object_file_symbol_table.keys():
+                        if (object_file_symbol_table[symbol_name]['type'] == 'FUNC' or object_file_symbol_table[symbol_name]['type'] == 'OBJECT') and object_file_symbol_table[symbol_name]['bind'] != 'LOCAL' and object_file_symbol_table[symbol_name]['location'] != 'UND':
+                            object_file_symbols_for_comparison[symbol_name] = object_file_symbol_table[symbol_name]
                     
-                    #Compare each symbol from symbols_to_compare to object_file_symbols_to_be_compared from the object file of the current static lib
-                    for symbol_to_compare_name in symbols_to_compare.keys():
+                    #Compare each symbol from the package file to each symbol of the object file
+                    for package_file_symbol in package_file_symbols_for_comparison.keys():
                         
-                        #If there is a symbol match
-                        if symbol_to_compare_name in object_file_symbols_to_be_compared.keys():
+                        #If there is a symbol match with the object file
+                        if package_file_symbol in object_file_symbols_for_comparison.keys():
                             
-                            #If the object file symbol is WEAK
-                            if object_file_symbols_to_be_compared[symbol_to_compare_name]['bind'] == 'WEAK':
-                                #Ignore it, no strong linking can happen with weak symbols
+                            #If the mathced symbol with the object file symbol is WEAK
+                            if object_file_symbols_for_comparison[package_file_symbol]['bind'] == 'WEAK':
+                                #Ignore it, no strong linking can happen with a weak symbol of the object file , this case is going to be handle by other functions
+                                #Continue with the next package_file_symbol
                                 pass
 
-                            #else if the object file symbol is in previous_strong_linked_symbols
-                            elif symbol_to_compare_name in previous_strong_linked_symbols.keys():
-                                #Get the name of the file to be compared
-                                file_to_be_compared_name = file_to_be_compared.get_name()
+                            #else if the matched symbol is in the list of previous strong linked symbols. This means that the symbol is already found in some static libs or object files before
+                            elif package_file_symbol in previous_strong_linked_symbols.keys():
+                                #Get the name of the object file
+                                object_file_name = object_file.get_name()
 
-                                #Get the duplicated strong symbols of the current object file
-                                file_to_be_compared_duplicate_symbols = file_to_be_compared.get_duplicate_linked_symbols()
+                                #Get the duplicated symbol table of the object file
+                                object_file_duplicate_symbol_table = object_file.get_duplicate_linked_symbols()
 
-                                #Get file path of the file to compare
-                                file_to_compare_path = file_to_compare.get_path()
+                                #Get file path of the package file
+                                package_file_path = package_file.get_path()
                                 
                                 #Set linking status of the current object file to "duplicate strong static"
-                                file_to_be_compared.set_link_status('duplicate strong static')
-
+                                object_file.set_link_status('duplicate strong static')
                                 
-                                #Add duplicate symbol to file_to_be_compared_duplicate_symbols
-                                if symbol_to_compare_name not in file_to_be_compared_duplicate_symbols.keys():
-                                    #If the duplicate symbol is not already recorded as duplicate symbol before, it is then created now for this lib
-                                    file_to_be_compared_duplicate_symbols[symbol_to_compare_name] = {}
-                                    file_to_be_compared_duplicate_symbols[symbol_to_compare_name]['reported_by'] = {}
+                                #Check if the duplicate symbol is recorded to duplicate symbol table of the object file before
+                                if package_file_symbol not in object_file_duplicate_symbol_table.keys():
+                                    #If not, record the duplicate symbol to duplicate symbol table of the object file
+                                    object_file_duplicate_symbol_table[package_file_symbol] = {}
+                                    object_file_duplicate_symbol_table[package_file_symbol]['reported_by'] = {}
                                 else:
-                                    #Do nothing, the symbol is already recorded before
+                                    #Do nothing, the duplicate symbol is already recorded before
                                     pass
 
-                                #Add the file_to_compare which report this duplicate symbol and a list of files which have the same duplicate symbol
-                                if file_to_compare_path not in file_to_be_compared_duplicate_symbols[symbol_to_compare_name]['reported_by'].keys():
-                                    file_to_be_compared_duplicate_symbols[symbol_to_compare_name]['reported_by'][file_to_compare_path] = {}
-                                    file_to_be_compared_duplicate_symbols[symbol_to_compare_name]['reported_by'][file_to_compare_path]['duplicate_files'] = previous_strong_linked_symbols[symbol_to_compare_name]
+                                #If the package file which reports the duplicate symbol of the object file is added before
+                                if package_file_path not in object_file_duplicate_symbol_table[package_file_symbol]['reported_by'].keys():
+                                    #If not, add the package file which reports the duplicate symbol and a list of previous linked files which share the same duplicate symbol
+                                    object_file_duplicate_symbol_table[package_file_symbol]['reported_by'][package_file_path] = {}
+                                    object_file_duplicate_symbol_table[package_file_symbol]['reported_by'][package_file_path]['duplicate_files'] = previous_strong_linked_symbols[package_file_symbol]
                                 else:
-                                    #If the file_to_compare is already recorded as reporting this duplicate symbol, do nothing to avoid overwriting
+                                    #If the the package file is already added before, do nothing to avoid overwriting
                                     pass
 
-                                #Set linking status of all linked files corresponding to the same strong symbol in previous_strong_linked_symbols to "duplicate strong static" and create the corresponding duplicate symbols also
-                                for linked_file in previous_strong_linked_symbols[symbol_to_compare_name].values():
-                                    #Set linking status of the linked file to "duplicate strong static"
-                                    linked_file.set_link_status('duplicate strong static')
+                                #Update all previously linked files, static libs or object files, which share the same duplicate symbol
+                                for previous_recipe_sysroot_file in previous_strong_linked_symbols[package_file_symbol].values():
 
-                                    #Get the duplicate symbols of the linked file
-                                    linked_lib_duplicate_symbols = linked_file.get_duplicate_linked_symbols()
+                                    #Set linking status of the previous linked file to "duplicate strong static"
+                                    previous_recipe_sysroot_file.set_link_status('duplicate strong static')
 
-                                    #The steps below are the same as steps above which used to create a list of duplicate symbols
-                                    #We have to manually repeat these 2 steps to ensure that we are actually appending the new reporter to the  duplicate symbols of the linked file
-                                    #Setting the duplicate linked symbols using the method "set_duplicate_linked_symbols" is replacing the whole duplicate symbols of the linked file, which is not what we want
+                                    #Get the duplicate symbol table of the previous linked file
+                                    previous_recipe_sysroot_file_duplicate_symbol_table = previous_recipe_sysroot_file.get_duplicate_linked_symbols()
 
-                                    #Add the duplicate symbol to the linked file
-                                    if symbol_to_compare_name not in linked_lib_duplicate_symbols.keys():
-                                        #If the duplicate symbol is not already recorded as duplicate symbol before, it is then created now for this file
-                                        linked_lib_duplicate_symbols[symbol_to_compare_name] = {}
-                                        linked_lib_duplicate_symbols[symbol_to_compare_name]['reported_by'] = {}
+                                    #Check if the duplicate symbol is recorded to duplicate symbol table of the previous linked file
+                                    if package_file_symbol not in previous_recipe_sysroot_file_duplicate_symbol_table.keys():
+                                        #If not, add the duplicate symbol to duplicate symbol table of the previous linked file
+                                        previous_recipe_sysroot_file_duplicate_symbol_table[package_file_symbol] = {}
+                                        previous_recipe_sysroot_file_duplicate_symbol_table[package_file_symbol]['reported_by'] = {}
                                     else:
                                         #Do nothing, the symbol is already recorded before
                                         pass
 
-                                    #Add the file_to_compare which report this duplicate symbol and a list of files which have the same duplicate symbol
-                                    if file_to_compare_path not in linked_lib_duplicate_symbols[symbol_to_compare_name]['reported_by'].keys():
-                                        linked_lib_duplicate_symbols[symbol_to_compare_name]['reported_by'][file_to_compare_path] = {}
-                                        linked_lib_duplicate_symbols[symbol_to_compare_name]['reported_by'][file_to_compare_path]['duplicate_files'] = previous_strong_linked_symbols[symbol_to_compare_name]
+                                    #Check if the package file which reports the duplicate symbol is added to the duplicate symbol table of the previous linked file
+                                    if package_file_path not in previous_recipe_sysroot_file_duplicate_symbol_table[package_file_symbol]['reported_by'].keys():
+                                        #If not, add the package file which reports the duplicate symbol and a list of files which have the same duplicate symbol
+                                        previous_recipe_sysroot_file_duplicate_symbol_table[package_file_symbol]['reported_by'][package_file_path] = {}
+                                        previous_recipe_sysroot_file_duplicate_symbol_table[package_file_symbol]['reported_by'][package_file_path]['duplicate_files'] = previous_strong_linked_symbols[package_file_symbol]
                                     else:
-                                        #If the file_to_compare is already recorded as reporting this duplicate symbol, do nothing to avoid overwriting
+                                        #If the report package file is already added before, do nothing to avoid overwriting
                                         pass
 
-                                #Add the current object file to the corresponding symbol in previous_strong_linked_symbols also
-                                previous_strong_linked_symbols[symbol_to_compare_name][file_to_be_compared_name] = file_to_be_compared
+                                #Update current object file with the duplicate symbol to previous_strong_linked_symbols for future reference
+                                previous_strong_linked_symbols[package_file_symbol][object_file_name] = object_file
 
-                                #Get file path list in strong_static_linked_libs
+                                #Get list of all statically linked files with strong symbols
                                 strong_static_linked_file_paths = [file.get_path() for file in strong_static_linked_libs]
 
-                                #Add the current object file to the strong_static_linked_libs if the current object file is not already in the list
-                                file_to_be_compared_path = file_to_be_compared.get_path()
-                                if file_to_be_compared_path not in strong_static_linked_file_paths:
-                                    strong_static_linked_libs.append(file_to_be_compared)
+                                #Add the object file to list of statically linked files with strong symbols if the current object file is not already in the list
+                                object_file_path = object_file.get_path()
+                                if object_file_path not in strong_static_linked_file_paths:
+                                    strong_static_linked_libs.append(object_file)
                                 
-                                #Break out since there is no need to check for other symbols in symbols_to_compare
+                                #Break out since there is no need to check with other symbols of the package file
                                 break
 
-                            #else if the object file symbol is not WEAK and is not in previous_strong_linked_symbols
-                            elif object_file_symbols_to_be_compared[symbol_to_compare_name]['bind'] != 'WEAK' and symbol_to_compare_name not in previous_strong_linked_symbols.keys():
-                                file_to_be_compared_name = file_to_be_compared.get_name()
+                            #else if the matched symbol with the object file symbol is not WEAK and is not in previous_strong_linked_symbols
+                            elif object_file_symbols_for_comparison[package_file_symbol]['bind'] != 'WEAK' and package_file_symbol not in previous_strong_linked_symbols.keys():
 
-                                #Set linking status of the static lib to "strong static"
-                                file_to_be_compared.set_link_status('strong static')
+                                #Get name of the object file
+                                object_file_name = object_file.get_name()
 
-                                #Add the symbol to previous_strong_linked_symbols with reference to the corresponding static lib
-                                previous_strong_linked_symbols[symbol_to_compare_name] = {}
-                                previous_strong_linked_symbols[symbol_to_compare_name][file_to_be_compared_name] = file_to_be_compared
+                                #Set linking status of the object file to "strong static"
+                                object_file.set_link_status('strong static')
 
-                                #Get file path list in strong_static_linked_libs
+                                #Add the symbol to previous_strong_linked_symbols with reference to the corresponding object file
+                                previous_strong_linked_symbols[package_file_symbol] = {}
+                                previous_strong_linked_symbols[package_file_symbol][object_file_name] = object_file
+
+                                #Get list of all statically linked files with strong symbols
                                 strong_static_linked_file_paths = [file.get_path() for file in strong_static_linked_libs]
 
-                                #Add the current object file to the strong_static_linked_libs if the current object file is not already in the list
-                                file_to_be_compared_path = file_to_be_compared.get_path()
-                                if file_to_be_compared_path not in strong_static_linked_file_paths:
-                                    strong_static_linked_libs.append(file_to_be_compared)
+                                #Add the object file to list of statically linked files with strong symbols if the current object file is not already in the list
+                                object_file_path = object_file.get_path()
+                                if object_file_path not in strong_static_linked_file_paths:
+                                    strong_static_linked_libs.append(object_file)
 
-                                #Break out since there is no need to check for other symbols in symbols_to_compare
+                                #Break out since there is no need to check for other symbols of the package file
                                 break
                 else:
                     #TODO: Handle other types of files, simply extract symbols of functions and variables of the file
