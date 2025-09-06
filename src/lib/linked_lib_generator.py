@@ -307,7 +307,7 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
         """  
 
         #Initialize list of static list with strong static linking or duplicate strong static linking
-        strong_static_linked_libs = []
+        static_linked_files = []
 
         #For each package file in package_libs_and_executables
         for package_file in package_libs_and_executables:
@@ -417,15 +417,15 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                     previous_strong_linked_symbols[package_file_symbol][static_lib.get_name()] = static_lib
 
                                     #Get file paths of all linked static files
-                                    strong_static_linked_libs_paths = [lib.get_path() for lib in strong_static_linked_libs]
+                                    static_linked_file_paths = [lib.get_path() for lib in static_linked_files]
 
                                     #Get file path of linked static lib with duplicate symbol
                                     static_lib_path = static_lib.get_path()
 
                                     #Check if the linked static lib is not added to list of linked static files before
-                                    if static_lib_path not in strong_static_linked_libs_paths:
+                                    if static_lib_path not in static_linked_file_paths:
                                         #If yes, update the linked static lib to list of linked static files
-                                        strong_static_linked_libs.append(static_lib)
+                                        static_linked_files.append(static_lib)
 
                                     #Set the flag to indicate that strong linking is found
                                     is_strong_linking_found = True
@@ -443,13 +443,13 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                     previous_strong_linked_symbols[package_file_symbol][static_lib.get_name()] = static_lib
 
                                     #Get file paths of all linked static files
-                                    strong_static_linked_libs_paths = [lib.get_path() for lib in strong_static_linked_libs]
+                                    static_linked_file_paths = [lib.get_path() for lib in static_linked_files]
 
                                     #Check if the linked static lib is not added to list of linked static files before
                                     static_lib_path = static_lib.get_path()
-                                    if static_lib_path not in strong_static_linked_libs_paths:
+                                    if static_lib_path not in static_linked_file_paths:
                                         #If yes, update the linked static lib to list of linked static files
-                                        strong_static_linked_libs.append(static_lib)
+                                        static_linked_files.append(static_lib)
 
                                     #Set the flag to indicate that strong linking is found
                                     is_strong_linking_found = True
@@ -555,12 +555,12 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                 previous_strong_linked_symbols[package_file_symbol][object_file_name] = object_file
 
                                 #Get list of all statically linked files with strong symbols
-                                strong_static_linked_file_paths = [file.get_path() for file in strong_static_linked_libs]
+                                strong_static_linked_file_paths = [file.get_path() for file in static_linked_files]
 
                                 #Add the object file to list of statically linked files with strong symbols if the current object file is not already in the list
                                 object_file_path = object_file.get_path()
                                 if object_file_path not in strong_static_linked_file_paths:
-                                    strong_static_linked_libs.append(object_file)
+                                    static_linked_files.append(object_file)
                                 
                                 #Break out since there is no need to check with other symbols of the package file
                                 break
@@ -579,12 +579,12 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                 previous_strong_linked_symbols[package_file_symbol][object_file_name] = object_file
 
                                 #Get list of all statically linked files with strong symbols
-                                strong_static_linked_file_paths = [file.get_path() for file in strong_static_linked_libs]
+                                strong_static_linked_file_paths = [file.get_path() for file in static_linked_files]
 
                                 #Add the object file to list of statically linked files with strong symbols if the current object file is not already in the list
                                 object_file_path = object_file.get_path()
                                 if object_file_path not in strong_static_linked_file_paths:
-                                    strong_static_linked_libs.append(object_file)
+                                    static_linked_files.append(object_file)
 
                                 #Break out since there is no need to check for other symbols of the package file
                                 break
@@ -593,7 +593,7 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                     pass
         
         #Refine the duplicate symbols of strong static linked libs
-        duplicate_strong_static_linked_libs = [lib for lib in strong_static_linked_libs if lib.get_duplicate_linked_symbols() != {}]
+        duplicate_strong_static_linked_libs = [lib for lib in static_linked_files if lib.get_duplicate_linked_symbols() != {}]
 
         for duplicate_strong_static_linked_lib in duplicate_strong_static_linked_libs:
             #Get duplicated symbols
@@ -610,7 +610,7 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                     report_files[report_file_name]['duplicate_files'] = [file.get_path() for file in report_files[report_file_name]['duplicate_files'].values()]
 
                 
-        return strong_static_linked_libs
+        return static_linked_files
 
 
     def __generate_linked_libs_with_symbol_comparison(self, package_libs_and_executables, recipe_sysroot_libs_and_executables, d):
