@@ -659,7 +659,7 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
         return static_linked_libs
 
     def __generate_list_of_statically_linked_libs(self, pkgfiles, d):
-        """_summary_
+        """Generate list of potentially linked static libs or object files with help of symbol comparison
 
         Arguments:
             pkgfiles -- Dictionary of files in each packages
@@ -708,6 +708,14 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
 
 
     def __generate_list_of_statically_linked_header_files(self, d):
+        """Generate list of potentially linked header files
+
+        Arguments:
+            d -- datastore of Yocto build system
+
+        Returns:
+            A list of potentially linked header files. Empty list [] if there are none.
+        """        
         recipe_sysroot = d.getVar('RECIPE_SYSROOT')
 
         #Create a list of header files located in the RECIPE_SYSROOT directory
