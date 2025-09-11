@@ -10,12 +10,25 @@ class LinkedLibsGenerator(ABC):
         pass
 
 class DynamicLinkedLibsGenerator(LinkedLibsGenerator):
-    
+    """Generator of dynamic linked libraries
+    """ 
+
     def __init__(self, pkgfiles, d):
+        """Constructor
+
+        Arguments:
+            pkgfiles -- Dictionary of files in each packages
+            d -- datastore of Yocto build system
+        """
         self.m_pkgfiles = pkgfiles
         self.m_d = d
 
     def generate(self):
+        """Generate a list of dynamci linked libraries
+
+        Returns:
+            A list of potentially linked dynamic libraries
+        """
 
         recipe_sysroot = self.m_d.getVar('RECIPE_SYSROOT')
 
@@ -69,16 +82,27 @@ class DynamicLinkedLibsGenerator(LinkedLibsGenerator):
         return recipe_sysroot_linked_shared_libs
     
     def __generate_linked_shared_lib_names(self, pkgfiles, d):
-        shlibs_dir = d.getVar('SHLIBSDIRS')
+        """Extract info from package metadata directory and generate a list containing names of all linked shared libs
+
+        Arguments:
+            pkgfiles -- Dictionary of files in each packages
+            d -- datastore of Yocto build system
+
+        Returns:
+            A list which contains names of all linked shared libs
+        """            
+
+        #Get path to package metadata directory
         pkg_data_dir = d.getVar('PKGDATA_DIR')
 
-        #Create a list of all linked libs of all packages
-        linked_libs = []
+        #Create a list of all linked shared lib names
+        linked_lib_names = []
 
         #Loop through each package in the current recipe
         for linked_package in pkgfiles.keys():
 
             #Create a list of file paths
+            #We do not know how many metadata files are available in a package folder in 'runtime-rprovides', a little bit awkward to use a list here, but just be on safe side
             package_file_paths = []
         
             #Check for file with the same package name in PKGDATA_DIR/runtime
@@ -150,12 +174,12 @@ class DynamicLinkedLibsGenerator(LinkedLibsGenerator):
                 package_linked_libs.extend(extracted_shared_linked_libs)
             
             #Add linked libs of the current package to the linked libs of all packages
-            linked_libs.extend(package_linked_libs)
+            linked_lib_names.extend(package_linked_libs)
         
         #Filter the linked_libs to ensure no duplicate files
-        linked_libs = list(set(linked_libs))
+        linked_lib_names = list(set(linked_lib_names))
         
-        return linked_libs
+        return linked_lib_names
 
 class StaticLinkedLibsGenerator(LinkedLibsGenerator):
     """Generator of static linked libraries
