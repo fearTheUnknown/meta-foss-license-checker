@@ -981,7 +981,7 @@ def package_qa_check_license_compliance(pkgs, pkgfiles, d):
     linked_libs = static_linking_files + dynamic_linking_files
 
     #Apply the FOSS license check algorithm on list of linked libs
-    FossComplianceChecker(d=d).run(linked_libs)
+    FossComplianceChecker(linked_files=linked_libs, d=d).run()
 
 def package_qa_check_deps(pkg, pkgdest, d):
 
