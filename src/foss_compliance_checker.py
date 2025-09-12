@@ -48,6 +48,9 @@ class FossComplianceChecker:
             bb.note("FOSS license compliance check completed successfully. No linked files found. Nothing to check.")
     
     def __load_config(self):
+        """Load and extract attributes from foss config and recipe config
+        """        
+
         #Check if foss configuration exists and loads it
         if os.path.exists(self.m_foss_config_file_path):
             #Load the foss configuration file if it is created before
@@ -100,17 +103,18 @@ class FossComplianceChecker:
                 pass
     
     def __run_license_check(self):
+        """Execute all license checks on the recipe
+        """        
+
+        self.__check_linked_file_change()
+        self.__check_previous_concerning_linked_files()
+        self.__check_new_linked_files()
+    
+    def __check_linked_file_change(self):
+        """Check if there are changes in approved linked files as compared to the moment when they are approved
+        """        
 
         for linked_file in self.m_linked_files:
-
-            #Get the file license
-            file_license = linked_file.get_license()
-
-            #Get the file linking status
-            file_linking_status = linked_file.get_link_status()
-
-            #Get the file extension
-            file_extension = linked_file.get_extension()
 
             #Check if the file is in list of approved files
             if linked_file.get_path() in self.m_approved_file_paths:
@@ -128,9 +132,26 @@ class FossComplianceChecker:
                 else:
                     #If the checksum is not changed, do nothing
                     continue
+            else:
+                #Do nothing
+                pass
+    
+    def __check_previous_concerning_linked_files(self):
+        """Check if previously reported linked files are properly handled
+        """        
 
-            #else if the file is in the list of files to be checked
-            elif linked_file.get_path() in self.m_files_to_be_checked_paths:
+        for linked_file in self.m_linked_files:
+            #Get the file license
+            file_license = linked_file.get_license()
+
+            #Get the file linking status
+            file_linking_status = linked_file.get_link_status()
+
+            #Get the file extension
+            file_extension = linked_file.get_extension()
+            
+            #Check if the linked file needs to be checked by the user
+            if linked_file.get_path() in self.m_files_to_be_checked_paths:
                 #Check if the file has strict license
                 if file_license in self.m_strict_licenses:
                     #Check if the file has linking status of "strong static", "duplicate strong static", "weak static", "dynamic" or file is a header file
@@ -172,9 +193,26 @@ class FossComplianceChecker:
                 else:
                     #Log a warning that the file has unknown license
                     self.m_recipe_config_object.add_message("Warning: File [%s] has unknown license [%s]. Please help to define it in the common FOSS configuration file." % (linked_file.get_path(), file_license))
+            else:
+                #Do nothing
+                pass
+    
+    def __check_new_linked_files(self):
+        """Check and report recently created linked files
+        """        
 
-            #else if the file is not yet in the list of files to be checked and not in the list of approved files (normally the first run or new recipe added)
-            elif linked_file.get_path() not in self.m_approved_file_paths and linked_file.get_path() not in self.m_files_to_be_checked_paths:
+        for linked_file in self.m_linked_files:
+            #Get the file license
+            file_license = linked_file.get_license()
+
+            #Get the file linking status
+            file_linking_status = linked_file.get_link_status()
+
+            #Get the file extension
+            file_extension = linked_file.get_extension()
+
+            #Check if the linked file is a new one
+            if linked_file.get_path() not in self.m_approved_file_paths and linked_file.get_path() not in self.m_files_to_be_checked_paths:
 
                 #Check if the file has strict license
                 if file_license in self.m_strict_licenses:
@@ -236,6 +274,5 @@ class FossComplianceChecker:
                     self.m_recipe_config_object.add_message("Warning: File [%s] has unknown license [%s]. Please help to define it in the common FOSS configuration file." % (linked_file.get_path(), file_license))
                     self.m_recipe_config_object.add_file_to_be_checked(linked_file)
             else:
-                #Log fatal error and stop the process
-                bb.fatal("FOSS license compliance check failed: File [%s] is not defined. This should not happen." % (linked_file.get_path()))
+                #Do nothing
                 pass
