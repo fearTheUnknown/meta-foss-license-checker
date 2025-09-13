@@ -1,6 +1,8 @@
 import yaml
 
 class FossConfig:
+    """Class to create project level configuration for FOSS Compliance Check Algorithm
+    """    
     def __init__(self):
         self.m_strict_licenses = [] # Very strict with both static and dynamic linking
         self.m_half_strict_licenses = [] # Strict with static linking, but not with dynamic linking
@@ -43,7 +45,8 @@ class FossConfig:
         return self.m_open_licenses
 
 class RecipeConfig:
-
+    """Class to create a recipe configuration in FOSS Compliance Check Algorithm
+    """    
     def __init__(self):
         self.m_approved_files = []
         self.m_files_to_be_checked = []

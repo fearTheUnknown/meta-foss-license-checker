@@ -1,20 +1,51 @@
 import subprocess
-from file import *
+from lib.file import *
 import json
 import fnmatch
 import oe.package
 import hashlib
 
-# Return type (bits):
-# 0 - not elf
-# 1 - ELF
-# 2 - stripped
-# 4 - executable
-# 8 - shared library
-# 16 - kernel module
-# 32 - object file
-# 64 - AR Archive (static library)
+def explode_libs(s):
+    """Return a list of libs with '(' and ')' being removed
+
+    Arguments:
+        s -- A list of strings with each string is a shared lib with its version enclosed in '(' and ')'
+
+    Returns:
+        A list of strings of shared lib
+    """    
+    lib_list = s.split()
+
+    def remove_parentheses(s):
+        while '(' in s and ')' in s:
+            start = s.find('(')
+            end = s.find(')', start)
+            if end == -1:
+                break
+            s = s[:start] + s[end+1:]
+        return s
+    
+    return_list = [remove_parentheses(lib) for lib in lib_list]
+
+    return return_list
+
 def is_elf(path):
+    """Check if the file is a binary ELF file
+
+    Arguments:
+        path -- File path to be checked
+
+    Returns:
+        A set in form (path, exec_type) with exec_type bits being encoded as follows:
+        0 - not elf
+        1 - ELF
+        2 - stripped
+        4 - executable
+        8 - shared library
+        16 - kernel module
+        32 - object file
+        64 - AR Archive (static library)
+    """    
     exec_type = 0
     result = subprocess.check_output(["file", "-b", path], stderr=subprocess.STDOUT).decode("utf-8")
 
@@ -37,7 +68,17 @@ def is_elf(path):
 
 #Function code copied from https://www.geeksforgeeks.org/python/python-program-to-find-hash-of-file/
 def compute_file_hash(file_path, algorithm='sha256'):
-    """Compute the hash of a file using the specified algorithm."""
+    """Generate hash for the given file
+
+    Arguments:
+        file_path -- File path
+
+    Keyword Arguments:
+        algorithm -- Hash algorithm (default: {'sha256'})
+
+    Returns:
+        Hash value of the given file
+    """    
     hash_func = hashlib.new(algorithm)
     
     with open(file_path, 'rb') as file:
@@ -48,6 +89,15 @@ def compute_file_hash(file_path, algorithm='sha256'):
     return hash_func.hexdigest()
 
 def find_path(filepath, d):
+    """Find package which provides the given file path
+
+    Arguments:
+        filepath -- File path in a root filesystem
+        d -- datastore of Yocto build system
+
+    Returns:
+        A set (package_name, file_path)
+    """    
 
     pkgdata_dir_path = d.getVar('PKGDATA_DIR')
 
@@ -371,8 +421,19 @@ def __create_symbol_table(file_path, d):
 
     return symbol_table
 
-def generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
-    elf_readable_list = []
+def convert_to_list_of_readable_object_files(file_paths=[], d=None):
+    """Convert given file paths into Python objects for easy access and processing.
+
+    Keyword Arguments:
+        file_paths -- List of file paths to be converted into objects (default: {[]})
+        d -- datastore of Yocto build system (default: {None})
+
+    Returns:
+        List of readable objects in Python of the given list of file paths
+    """    
+    
+    #Initialize object file list
+    readable_object_file_list = []
 
     #Loop through each file path in the package
     for file_path in file_paths:
@@ -400,7 +461,7 @@ def generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
                                    license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={}, checksum=checksum)
 
             #Add shared lib object to the list
-            elf_readable_list.append(shared_lib)
+            readable_object_file_list.append(shared_lib)
 
         #Check if file is an ELF executable
         elif (file_type & 1) and (file_type & 4):
@@ -414,7 +475,7 @@ def generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
                                     license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={}, checksum=checksum)
 
             #Add file to the list
-            elf_readable_list.append(executable)
+            readable_object_file_list.append(executable)
         
         #Check if file is an object file
         elif (file_type & 1) and (file_type & 32):
@@ -428,7 +489,7 @@ def generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
                                      license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={}, checksum=checksum)
 
             #Add object file object to the list
-            elf_readable_list.append(object_file)
+            readable_object_file_list.append(object_file)
         
         #Check if file is an AR archive (static library)
         elif (file_type & 64):
@@ -442,7 +503,7 @@ def generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
                                    license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={}, checksum=checksum)
 
             #Add static lib object to the list
-            elf_readable_list.append(static_lib)
+            readable_object_file_list.append(static_lib)
         
         #Check if file is a C header file
         elif file_type == 0 and file_extension == '.h':
@@ -453,16 +514,24 @@ def generate_list_of_shared_libs_and_executables(file_paths=[], d=None):
                                      license='', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}, checksum=checksum)
             
             #Add header file to the list
-            elf_readable_list.append(header_file)
+            readable_object_file_list.append(header_file)
         
         else:
             #If file is not among predefined file types above, ignore it
             pass
-    
-    return elf_readable_list
+
+    #Add meta info to list of generated object files
+    add_info_from_pkgdata_dir(files=readable_object_file_list, d=d)
+
+    return readable_object_file_list
 
 
 def add_info_from_pkgdata_dir(files, d):
+    """Update info of package, recipe and license for each file in the given file list of the recipe.
+    Arguments:
+        files -- List of files to be updated
+        d -- datastore of Yocto build system
+    """    
 
     #Get base directories where metadata of files are accessible
     pkgdest_dir_path = d.getVar('PKGDEST')

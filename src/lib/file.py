@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 
 class File(ABC):
+    """Abstract class of a linked file
+    """    
     def __init__(self, path='', name='', extension='', fromPackage='', fromRecipe='',license='', linkStatus = '', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}, checksum=''):
         self.m_path = path
         self.m_name = name
@@ -112,6 +114,8 @@ class File(ABC):
         pass
 
 class HeaderFile(File):
+    """Class to create object of a linked header file
+    """    
     def __init__(self, path='', name='', extension='', fromPackage='', fromRecipe='',license='', linkStatus = '', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}, checksum=''):
         super().__init__(path=path, name=name, extension=extension, fromPackage=fromPackage, fromRecipe=fromRecipe, license=license, linkStatus=linkStatus, symbolTable=symbolTable, strongLinkedSymbols=strongLinkedSymbols, weakLinkedSymbols=weakLinkedSymbols, duplicateLinkedSymbols=duplicateLinkedSymbols, checksum=checksum)
 
@@ -188,6 +192,8 @@ class HeaderFile(File):
         self.m_checksum = checksum
 
 class StaticLib(File):
+    """Class to create object of a linked static lib
+    """ 
     def __init__(self, path='', name='', extension='', fromPackage='', fromRecipe='',license='', linkStatus = '', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}, checksum=''):
         super().__init__(path=path, name=name, extension=extension, fromPackage=fromPackage, fromRecipe=fromRecipe, license=license, linkStatus=linkStatus, symbolTable=symbolTable, strongLinkedSymbols=strongLinkedSymbols, weakLinkedSymbols=weakLinkedSymbols, duplicateLinkedSymbols=duplicateLinkedSymbols, checksum=checksum)
 
@@ -264,6 +270,8 @@ class StaticLib(File):
         self.m_checksum = checksum
 
 class SharedLib(File):
+    """Class to create object of a linked shared lib
+    """ 
     def __init__(self, path='', name='', extension='', fromPackage='', fromRecipe='',license='', linkStatus = '', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}, checksum=''):
         super().__init__(path=path, name=name, extension=extension, fromPackage=fromPackage, fromRecipe=fromRecipe, license=license, linkStatus=linkStatus, symbolTable=symbolTable, strongLinkedSymbols=strongLinkedSymbols, weakLinkedSymbols=weakLinkedSymbols, duplicateLinkedSymbols=duplicateLinkedSymbols, checksum=checksum)
 
@@ -340,6 +348,8 @@ class SharedLib(File):
         self.m_checksum = checksum
 
 class Executable(File):
+    """Class to create object of an ELF Executable binary file
+    """ 
     def __init__(self, path='', name='', extension='', fromPackage='', fromRecipe='',license='', linkStatus = '', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}, checksum=''):
         super().__init__(path=path, name=name, extension=extension, fromPackage=fromPackage, fromRecipe=fromRecipe, license=license, linkStatus=linkStatus, symbolTable=symbolTable, strongLinkedSymbols=strongLinkedSymbols, weakLinkedSymbols=weakLinkedSymbols, duplicateLinkedSymbols=duplicateLinkedSymbols, checksum=checksum)
 
@@ -416,6 +426,8 @@ class Executable(File):
         self.m_checksum = checksum
 
 class ObjectFile(File):
+    """Class to create object of a linked object file
+    """ 
     def __init__(self, path='', name='', extension='', fromPackage='', fromRecipe='',license='', linkStatus = '', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}, checksum=''):
         super().__init__(path=path, name=name, extension=extension, fromPackage=fromPackage, fromRecipe=fromRecipe, license=license, linkStatus=linkStatus, symbolTable=symbolTable, strongLinkedSymbols=strongLinkedSymbols, weakLinkedSymbols=weakLinkedSymbols, duplicateLinkedSymbols=duplicateLinkedSymbols, checksum=checksum)
 
