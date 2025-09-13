@@ -6,7 +6,14 @@ import oe.package
 import hashlib
 
 def explode_libs(s):
+    """Return a list of libs with '(' and ')' being removed
 
+    Arguments:
+        s -- A list of strings with each string is a shared lib with its version enclosed in '(' and ')'
+
+    Returns:
+        A list of strings of shared lib
+    """    
     lib_list = s.split()
 
     def remove_parentheses(s):
@@ -22,16 +29,23 @@ def explode_libs(s):
 
     return return_list
 
-# Return type (bits):
-# 0 - not elf
-# 1 - ELF
-# 2 - stripped
-# 4 - executable
-# 8 - shared library
-# 16 - kernel module
-# 32 - object file
-# 64 - AR Archive (static library)
 def is_elf(path):
+    """Check if the file is a binary ELF file
+
+    Arguments:
+        path -- File path to be checked
+
+    Returns:
+        A set in form (path, exec_type) with exec_type bits being encoded as follows:
+        0 - not elf
+        1 - ELF
+        2 - stripped
+        4 - executable
+        8 - shared library
+        16 - kernel module
+        32 - object file
+        64 - AR Archive (static library)
+    """    
     exec_type = 0
     result = subprocess.check_output(["file", "-b", path], stderr=subprocess.STDOUT).decode("utf-8")
 
@@ -54,7 +68,17 @@ def is_elf(path):
 
 #Function code copied from https://www.geeksforgeeks.org/python/python-program-to-find-hash-of-file/
 def compute_file_hash(file_path, algorithm='sha256'):
-    """Compute the hash of a file using the specified algorithm."""
+    """Generate hash for the given file
+
+    Arguments:
+        file_path -- File path
+
+    Keyword Arguments:
+        algorithm -- Hash algorithm (default: {'sha256'})
+
+    Returns:
+        Hash value of the given file
+    """    
     hash_func = hashlib.new(algorithm)
     
     with open(file_path, 'rb') as file:
@@ -65,6 +89,15 @@ def compute_file_hash(file_path, algorithm='sha256'):
     return hash_func.hexdigest()
 
 def find_path(filepath, d):
+    """Find package which provides the given file path
+
+    Arguments:
+        filepath -- File path in a root filesystem
+        d -- datastore of Yocto build system
+
+    Returns:
+        A set (package_name, file_path)
+    """    
 
     pkgdata_dir_path = d.getVar('PKGDATA_DIR')
 

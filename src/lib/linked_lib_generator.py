@@ -4,6 +4,8 @@ from pathlib import Path
 import os
 
 class LinkedLibsGenerator(ABC):
+    """Abstract class used to create a linked library generator
+    """    
     
     @abstractmethod
     def generate(self):

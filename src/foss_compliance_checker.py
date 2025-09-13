@@ -1,10 +1,13 @@
 from lib.foss_config import *
 
 class FossComplianceChecker:
+    """FOSS Compliance Check Algorithm
+    """    
     def __init__(self, linked_files,d):
         self.m_linked_files = linked_files
         self.m_d = d
 
+        #Set up initial directories
         self.m_layer_dir = self.m_d.getVar('LAYERDIR_WS')
         self.m_foss_config_dir = os.path.join(self.m_layer_dir, 'tool-config')
         self.m_recipe_config_dir = os.path.join(self.m_layer_dir, 'recipes-config')
@@ -32,6 +35,8 @@ class FossComplianceChecker:
         self.m_files_to_be_checked_paths = None
 
     def run(self):
+        """Load all configs and execute the license check algorithm
+        """        
         #Check if the list of linked files is not empty
         if self.m_linked_files != []:
 
@@ -81,6 +86,8 @@ class FossComplianceChecker:
         self.m_files_to_be_checked_paths = [file.get_path() for file in self.m_files_to_be_checked]
     
     def __show_result(self):
+        """Write logs and forward warning messages to console
+        """        
         #Check if there are any warning messages in the message buffer of the recipe
         if not self.m_recipe_config_object.is_message_buffer_empty():
 
