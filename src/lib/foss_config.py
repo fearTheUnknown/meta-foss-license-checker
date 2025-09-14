@@ -104,6 +104,12 @@ class RecipeConfig:
     def get_files_to_be_checked(self):
         return self.m_files_to_be_checked
     
+    def set_approved_files(self, approved_files):
+        self.m_approved_files = approved_files
+    
+    def set_files_to_be_checked(self, files_to_be_checked):
+        self.m_files_to_be_checked = files_to_be_checked
+    
     def is_message_buffer_empty(self):
         #Check if the message buffer is empty
         if self.m_messages == []:
