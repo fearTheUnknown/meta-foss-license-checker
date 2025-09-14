@@ -147,7 +147,11 @@ class FossComplianceChecker:
         """Check if previously reported linked files are properly handled
         """        
 
-        for linked_file in self.m_linked_files:
+        #Latest list of file to be check.
+        #The reason this is used is that we do not want to remove outdated elements from old list of files to be check since it causes unexpected behavior during looping
+        new_files_to_be_checked = []
+
+        for linked_file in self.m_files_to_be_checked:
             #Get the file license
             file_license = linked_file.get_license()
 
@@ -161,6 +165,10 @@ class FossComplianceChecker:
             if linked_file.get_path() in self.m_files_to_be_checked_paths:
                 #Check if the file has strict license
                 if file_license in self.m_strict_licenses:
+
+                    #Add file to the latest files to be checked
+                    new_files_to_be_checked.append(linked_file)
+
                     #Check if the file has linking status of "strong static", "duplicate strong static", "weak static", "dynamic" or file is a header file
                     if file_linking_status == "strong static":
                         self.m_recipe_config_object.add_message("Warning: File [%s] has strict license [%s] with strong linking status [%s]. Please help to check and add this file to approved list accordingly." % (linked_file.get_path(), file_license, file_linking_status))
@@ -182,6 +190,10 @@ class FossComplianceChecker:
 
                 #Check if the file has half-strict license
                 elif file_license in self.m_half_strict_licenses:
+
+                    #Add file to the latest files to be checked
+                    new_files_to_be_checked.append(linked_file)
+
                     #Check if the file has linking status of "strong static", "duplicate strong static", "weak static" or file is a header file
                     if file_linking_status == "strong static":
                         self.m_recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] with strong linking status [%s]. Please help to check and add this file to approved list accordingly." % (linked_file.get_path(), file_license, file_linking_status))
@@ -197,12 +209,26 @@ class FossComplianceChecker:
 
                     else:
                         self.m_recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] but linking status is unknown. Please help to check and add this file to approved list accordingly." % (linked_file.get_path(), file_license))
+                
+                #Check if the file has open license
+                elif file_license in self.m_open_licenses:
+                    #Ignore file with open license, do not add to latest list of files to be checked
+                    pass
+
                 else:
+                     #Add file to the latest files to be checked
+                    new_files_to_be_checked.append(linked_file)
+
                     #Log a warning that the file has unknown license
                     self.m_recipe_config_object.add_message("Warning: File [%s] has unknown license [%s]. Please help to define it in the common FOSS configuration file." % (linked_file.get_path(), file_license))
             else:
                 #Do nothing
                 pass
+        
+        #Update list of files to be checked in recipe config
+        self.m_recipe_config_object.set_files_to_be_checked(new_files_to_be_checked) 
+        self.m_files_to_be_checked = self.m_recipe_config_object.get_files_to_be_checked()
+        self.m_files_to_be_checked_paths = [file.get_path() for file in self.m_files_to_be_checked]
     
     def __check_new_linked_files(self):
         """Check and report recently created linked files
