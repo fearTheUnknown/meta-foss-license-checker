@@ -96,10 +96,13 @@ def find_path(filepath, d):
         d -- datastore of Yocto build system
 
     Returns:
-        A set (package_name, file_path)
+        A set (package_names, file_paths)
     """    
 
     pkgdata_dir_path = d.getVar('PKGDATA_DIR')
+
+    packages_names = []
+    file_paths = []
 
     found = False
     for root, dirs, files in os.walk(os.path.join(pkgdata_dir_path, 'runtime')):
@@ -112,10 +115,13 @@ def find_path(filepath, d):
                         for fullpth in dictval.keys():
                             if fnmatch.fnmatchcase(fullpth, filepath):
                                 found = True
-                                return (fn, fullpth)
+                                packages_names.append(fn)
+                                file_paths.append(fullpth)
                         break
     if not found:
         bb.error("Unable to find any packages producing path %s" % filepath)
+    else:
+        return (packages_names, file_paths)
 
 def __get_recipe_of_package(package_name, d):
     pkgdata_dir_path = d.getVar('PKGDATA_DIR')
