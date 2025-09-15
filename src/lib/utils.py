@@ -123,7 +123,7 @@ def find_path(filepath, d):
     else:
         return (packages_names, file_paths)
 
-def __get_recipe_of_package(package_name, d):
+def get_recipe_of_package(package_name, d):
     pkgdata_dir_path = d.getVar('PKGDATA_DIR')
 
     package_metadata_file_path = os.path.join(pkgdata_dir_path, 'runtime', package_name)
@@ -137,7 +137,7 @@ def __get_recipe_of_package(package_name, d):
     else:
         bb.error("Package metadata file %s does not exist" % package_metadata_file_path)
 
-def __get_license_of_package(package_name, d):
+def get_license_of_package(package_name, d):
     pkgdata_dir_path = d.getVar('PKGDATA_DIR')
 
     package_metadata_file_path = os.path.join(pkgdata_dir_path, 'runtime', package_name)
