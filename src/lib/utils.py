@@ -537,12 +537,20 @@ def add_info_from_pkgdata_dir(files, d):
     Arguments:
         files -- List of files to be updated
         d -- datastore of Yocto build system
-    """    
+    """
 
     #Get base directories where metadata of files are accessible
     pkgdest_dir_path = d.getVar('PKGDEST')
     recipe_sysroot_dir_path = d.getVar('RECIPE_SYSROOT')
-    pkgdata_dir_path = d.getVar('PKGDATA_DIR')
+
+    #Get the target recipe
+    target_recipe = d.getVar('PN')
+
+    #Get all depend recipes
+    depend_recipes = []
+    for root, dirs, depend_files in os.walk(os.path.join(recipe_sysroot_dir_path, 'sysroot-providers')):
+        depend_recipes = [depend_file for depend_file in depend_files]
+    depend_recipes.append(target_recipe)
 
     for file in files:
 
@@ -553,18 +561,33 @@ def add_info_from_pkgdata_dir(files, d):
             root_filesystem_path_to_file = os.path.sep + os.path.relpath(file_path, recipe_sysroot_dir_path)
 
             #Find which package provide the file
-            (package_name, file_path_in_filesystem) = find_path(root_filesystem_path_to_file, d)
+            (package_names, file_path_in_filesystems) = find_path(root_filesystem_path_to_file, d)
+            
+            is_depend_recipe_found = False
+            for package_name in package_names:
+                #Get recipe of the package
+                recipe_name = get_recipe_of_package(package_name, d)
 
-            #Get recipe of the package
-            recipe_name = __get_recipe_of_package(package_name, d)
+                if recipe_name in depend_recipes:
+                    #Get license of the package
+                    license_name = get_license_of_package(package_name, d)
 
-            #Get license of the package
-            license_name = __get_license_of_package(package_name, d)
+                    #Set package, recipe and license of the provided file
+                    file.set_from_package(package_name)
+                    file.set_from_recipe(recipe_name)
+                    file.set_license(license_name)
 
-            #Set package, recipe and license of the provided file
-            file.set_from_package(package_name)
-            file.set_from_recipe(recipe_name)
-            file.set_license(license_name)
+                    is_depend_recipe_found = True
+                    break
+                else:
+                    #Do nothing
+                    pass
+            
+            if not is_depend_recipe_found:
+                bb.fatal("Cannot find depend recipe for file [%s] in depend package list " % {root_filesystem_path_to_file})
+            else:
+                #Do nothing
+                pass
 
         elif pkgdest_dir_path in file_path:
 
@@ -573,18 +596,33 @@ def add_info_from_pkgdata_dir(files, d):
             root_filesystem_path_to_file = os.path.sep + relative_path_to_file.split(os.path.sep, 1)[1]
 
             #Find which package provide the file
-            (package_name, file_path_in_filesystem) = find_path(root_filesystem_path_to_file, d)
+            (package_names, file_path_in_filesystems) = find_path(root_filesystem_path_to_file, d)
 
-            #Get recipe of the package
-            recipe_name = __get_recipe_of_package(package_name, d)
+            is_depend_recipe_found = False
+            for package_name in package_names:
+                #Get recipe of the package
+                recipe_name = get_recipe_of_package(package_name, d)
 
-            #Get license of the package
-            license_name = __get_license_of_package(package_name, d)
+                if recipe_name in depend_recipes:
+                    #Get license of the package
+                    license_name = get_license_of_package(package_name, d)
 
-            #Set package, recipe and license of the provided file
-            file.set_from_package(package_name)
-            file.set_from_recipe(recipe_name)
-            file.set_license(license_name)
+                    #Set package, recipe and license of the provided file
+                    file.set_from_package(package_name)
+                    file.set_from_recipe(recipe_name)
+                    file.set_license(license_name)
+
+                    is_depend_recipe_found = True
+                    break
+                else:
+                    #Do nothing
+                    pass
+            
+            if not is_depend_recipe_found:
+                bb.fatal("Cannot find depend recipe for file [%s] in depend package list " % {root_filesystem_path_to_file})
+            else:
+                #Do nothing
+                pass
 
         else:
             bb.warn("File %s is not located in RECIPE_SYSROOT or PKGDEST directory" % file_path)
