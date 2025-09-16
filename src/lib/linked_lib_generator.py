@@ -743,6 +743,7 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
             A list of potentially linked header files. Empty list [] if there are none.
         """        
         recipe_sysroot = d.getVar('RECIPE_SYSROOT')
+        is_base_headers_included = d.getVar('INCLUDE_BASE_HEADERS')
 
         #Create a list of header files located in the RECIPE_SYSROOT directory
         recipe_sysroot_file_paths = []
@@ -753,5 +754,23 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
         
         #Generate a list of header files in the RECIPE_SYSROOT directory
         recipe_sysroot_header_files = convert_to_list_of_readable_object_files(file_paths=recipe_sysroot_file_paths, d=d)
+
+        #Filter out header files from base recipes if requested
+        if is_base_headers_included == '0':
+            #Get base recipes
+            virtual_base_recipes = d.getVar('BASEDEPENDS').split()
+            base_recipes = [d.getVar('PREFERRED_PROVIDER_' + virtual_base_recipe) for virtual_base_recipe in virtual_base_recipes]
+
+            #Get linux base header recipe
+            linux_header_recipe = d.getVar('PREFERRED_PROVIDER_linux-libc-headers')
+
+            #Recipes with default headers
+            default_header_recipes = base_recipes + [linux_header_recipe]
+
+            #Extract header files which are not in base recipes
+            recipe_sysroot_header_files = [header_file for header_file in recipe_sysroot_header_files if header_file.get_from_recipe() not in default_header_recipes]
+        else:
+            #Do nothing
+            pass
 
         return recipe_sysroot_header_files
