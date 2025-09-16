@@ -205,10 +205,10 @@ class FossComplianceChecker:
                 #Check if the file has half-strict license
                 elif file_license in self.m_half_strict_licenses:
 
+                    latest_file_to_be_checked = file_to_be_checked
+
                     #Check if the linked file is still available, not changed or removed
                     if file_to_be_checked.get_path() in recently_linked_file_paths:
-                        
-                        latest_file_to_be_checked = file_to_be_checked
 
                         #Get recent version of the linked file
                         for recently_linked_file in self.m_linked_files:
@@ -216,23 +216,39 @@ class FossComplianceChecker:
                                 latest_file_to_be_checked = recently_linked_file
                                 break
 
+                    #Check if the file has linking status of "strong static", "duplicate strong static", "weak static" or file is a header file
+                    if file_linking_status == "strong static":
                         #Add file to the latest list of files to be checked
                         new_files_to_be_checked.append(latest_file_to_be_checked)
 
-                    #Check if the file has linking status of "strong static", "duplicate strong static", "weak static" or file is a header file
-                    if file_linking_status == "strong static":
                         self.m_recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] with strong linking status [%s]. Please help to check and add this file to approved list accordingly." % (file_to_be_checked.get_path(), file_license, file_linking_status))
 
                     elif file_linking_status == "duplicate strong static":
+                        #Add file to the latest list of files to be checked
+                        new_files_to_be_checked.append(latest_file_to_be_checked)
+
                         self.m_recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] with duplicate linking status [%s]. Please help to check if file is really linked to the build and add it to approved list accordingly." % (file_to_be_checked.get_path(), file_license, file_linking_status))
 
                     elif file_linking_status == "weak static":
+                        #Add file to the latest list of files to be checked
+                        new_files_to_be_checked.append(latest_file_to_be_checked)
+
                         self.m_recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] with weak linking status [%s]. Please help to check if file is really linked to the build and add this file to approved list accordingly." % (file_to_be_checked.get_path(), file_license, file_linking_status))
+                    
+                    elif file_linking_status == "dynamic":
+                        #Do nothing, dynamically linked file with half strict license is ignored
+                        pass
 
                     elif file_extension == ".h":
+                        #Add file to the latest list of files to be checked
+                        new_files_to_be_checked.append(latest_file_to_be_checked)
+
                         self.m_recipe_config_object.add_message("Warning: File [%s] has half strict license [%s]  and is a header file. Please help to check if this file is included in your build and add this file to approved list accordingly." % (file_to_be_checked.get_path(), file_license))
 
                     else:
+                        #Add file to the latest list of files to be checked
+                        new_files_to_be_checked.append(latest_file_to_be_checked)
+                        
                         self.m_recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] but linking status is unknown. Please help to check and add this file to approved list accordingly." % (file_to_be_checked.get_path(), file_license))
                 
                 #Check if the file has open license
@@ -324,6 +340,10 @@ class FossComplianceChecker:
                     elif file_linking_status == "weak static":
                         self.m_recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] with weak linking status [%s]. Please help to check if file is really linked to the build and add this file to approved list accordingly." % (linked_file.get_path(), file_license, file_linking_status))
                         self.m_recipe_config_object.add_file_to_be_checked(linked_file)
+                    
+                    elif file_linking_status == "dynamic":
+                        #Do nothig, half strict license just care about static linking only
+                        pass
 
                     elif file_extension == ".h":
                         self.m_recipe_config_object.add_message("Warning: File [%s] has half strict license [%s]  and is a header file. Please help to check if this file is included in your build and add this file to approved list accordingly." % (linked_file.get_path(), file_license))
