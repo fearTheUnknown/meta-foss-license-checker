@@ -1,5 +1,5 @@
-SUMMARY = "System Test Case 13"
-DESCRIPTION = "Test the warning suppression for linked shared libraries with half strict licenses"
+SUMMARY = "System Test Case 16"
+DESCRIPTION = "Test the warning suppression of approved files"
 LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
 
