@@ -542,15 +542,27 @@ def add_info_from_pkgdata_dir(files, d):
     #Get base directories where metadata of files are accessible
     pkgdest_dir_path = d.getVar('PKGDEST')
     recipe_sysroot_dir_path = d.getVar('RECIPE_SYSROOT')
+    sysroot_destdir_dir_path = d.getVar('SYSROOT_DESTDIR')
+
+    #Get list of all preferred recipes
+    preferred_providers = [key for key in d.keys() if key.startswith("PREFERRED_PROVIDER_")]
+    preferred_recipes = [d.getVar(preferred_provider) for preferred_provider in preferred_providers]
 
     #Get the target recipe
     target_recipe = d.getVar('PN')
 
-    #Get all depend recipes
-    depend_recipes = []
-    for root, dirs, depend_files in os.walk(os.path.join(recipe_sysroot_dir_path, 'sysroot-providers')):
-        depend_recipes = [depend_file for depend_file in depend_files]
-    depend_recipes.append(target_recipe)
+    #Get list of recipes that provide files in recipe-sysroot
+    sysroot_provided_recipes = []
+    for root, dirs, sysroot_recipes in os.walk(os.path.join(recipe_sysroot_dir_path, 'sysroot-providers')):
+        sysroot_provided_recipes = [recipe for recipe in sysroot_recipes]
+    
+    #Get list of recipes that the current provides in sysroot-destdir
+    sysroot_destdir_recipes = []
+    for root, dirs, destdir_recipes in os.walk(os.path.join(sysroot_destdir_dir_path, 'sysroot-providers')):
+        sysroot_destdir_recipes = [recipe for recipe in destdir_recipes]
+    
+    #Combine all to a list of depend recipes
+    depend_recipes = list(set(sysroot_provided_recipes + sysroot_destdir_recipes + preferred_recipes + [target_recipe]))
 
     for file in files:
 
