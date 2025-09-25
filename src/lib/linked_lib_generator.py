@@ -232,6 +232,8 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
         #For each package file in package_libs_and_executables
         for package_file in package_libs_and_executables:
 
+            previous_weak_linked_symbols = {}
+
             #Extract symbols of functions and variables of the package file with type FUNC/OBJECT, bind WEAK, visibility dont care, location is not UND for comparison
             package_file_symbol_table = package_file.get_symbol_table()
             package_file_symbols_for_comparison = {}
@@ -253,7 +255,7 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                     #If yes, for each object file in static lib
                     for object_file_name in static_lib_symbol_table.keys():
 
-                        is_weak_linking_found = False #Flag indicate that a weak symbol linking is found in the object file of the static lib under inspection
+                        is_next_lib = False #Flag indicate to iterate to next library
 
                         #Extract symbols of functions and data objects with type FUNC/OBJECT, bind WEAK, visibility dont care, location is not UND
                         object_file_symbols_for_comparison = {}
@@ -268,15 +270,46 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                             if package_file_symbol in object_file_symbols_for_comparison.keys():
 
                                 #If the linking status of the corresponding static lib is already set
-                                if static_lib.get_link_status() != '':
+                                if static_lib.get_link_status() == 'duplicate strong static' or static_lib.get_link_status() == 'strong static':
                                     #Do nothing, by pass this static lib, we know for sure that this file might have some kinds of "strong linking" already
-                                    is_weak_linking_found = True
+                                    is_next_lib = True
                                     break
                                 
-                                #else if the linking status of the corresponding static lib is not set
-                                elif static_lib.get_link_status() == '':
-                                    # Set linking status of the static lib to "weak static"
+                                #else if the linking status of the corresponding static lib is not set or already set before to weak
+                                elif static_lib.get_link_status() == '' or static_lib.get_link_status() == 'weak static':
+                                    #Get weak symbol table
+                                    static_lib_weak_symbol_table = static_lib.get_weak_linked_symbols()
+
+                                    #Get file path of the package file
+                                    package_file_path = package_file.get_path()
+
+                                    #Set linking status of the static lib to "weak static"
                                     static_lib.set_link_status('weak static')
+
+                                    #Update the symbol to list of weak symbols along with its reference to the corresponding static lib
+                                    if package_file_symbol not in previous_weak_linked_symbols.keys():
+                                        previous_weak_linked_symbols[package_file_symbol] = {}
+                                        previous_weak_linked_symbols[package_file_symbol][static_lib.get_name()] = static_lib
+                                    else:
+                                        previous_weak_linked_symbols[package_file_symbol][static_lib.get_name()] = static_lib
+
+                                    #If the weak symbol is not recorded to weak symbol table before, record it now
+                                    if package_file_symbol not in static_lib_weak_symbol_table.keys():
+                                        #Create placeholder for the symbol
+                                        static_lib_weak_symbol_table[package_file_symbol] = {}
+                                        static_lib_weak_symbol_table[package_file_symbol]['reported_by'] = {}
+                                    else:
+                                        #Do nothing, the symbol is already recorded before
+                                        pass
+
+                                    #Check if the package file which reports the weak symbol is added before
+                                    if package_file_path not in static_lib_weak_symbol_table[package_file_symbol]['reported_by'].keys():
+                                        #If not, add the package file which reports the weak symbol and a list of files which have the same weak symbol
+                                        static_lib_weak_symbol_table[package_file_symbol]['reported_by'][package_file_path] = {}
+                                        static_lib_weak_symbol_table[package_file_symbol]['reported_by'][package_file_path]['duplicate_files'] = previous_weak_linked_symbols[package_file_symbol]
+                                    else:
+                                        #If the report package file is already added before, do nothing to avoid overwriting
+                                        pass
 
                                     #Get file paths of static linked libs
                                     static_linked_lib_paths = [lib.get_path() for lib in static_linked_files]
@@ -285,14 +318,13 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                     static_lib_path = static_lib.get_path()
                                     if static_lib_path not in static_linked_lib_paths:
                                         static_linked_files.append(static_lib)
-
-                                    #Go to next static lib
-                                    is_weak_linking_found = True
-                                    break
+                                    else:
+                                        #Do nothing
+                                        pass
 
                         #If weak linking is found, break out to next static lib or object file.
                         #A single sign of weak linking in an object file is enough to conclude weak linking status of the static lib
-                        if is_weak_linking_found:
+                        if is_next_lib:
                             break
 
                 elif isinstance(recipe_sysroot_file, ObjectFile):
@@ -316,14 +348,46 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                         if package_file_symbol in object_file_symbols_for_comparison.keys():
 
                             #If the linking status of the corresponding statically linked file is already set
-                            if object_file.get_link_status() != '':
+                            if object_file.get_link_status() == 'duplicate strong static' or object_file.get_link_status() == 'strong static':
                                 #Do nothing, by pass this object file, we know for sure that this file might have some kinds of "strong linking" already
                                 break
                             
-                            #else if the linking status of the corresponding static lib is not set
-                            elif object_file.get_link_status() == '':
+                            #else if the linking status of the corresponding static lib is not set or already set before to weak
+                            elif object_file.get_link_status() == '' or object_file.get_link_status() == 'weak static':
+
                                 #Set linking status of the static lib to "weak static"
                                 object_file.set_link_status('weak static')
+
+                                #Get weak symbol table
+                                object_file_weak_symbol_table = object_file.get_weak_linked_symbols()
+
+                                #Get file path of the package file
+                                package_file_path = package_file.get_path()
+
+                                #Update the symbol to list of weak symbols along with its reference to the corresponding static lib
+                                if package_file_symbol not in previous_weak_linked_symbols.keys():
+                                    previous_weak_linked_symbols[package_file_symbol] = {}
+                                    previous_weak_linked_symbols[package_file_symbol][object_file.get_name()] = object_file
+                                else:
+                                    previous_weak_linked_symbols[package_file_symbol][object_file.get_name()] = object_file
+
+                                #If the weak symbol is not recorded to weak symbol table before, record it now
+                                if package_file_symbol not in object_file_weak_symbol_table.keys():
+                                    #Create placeholder fro the symbol
+                                    object_file_weak_symbol_table[package_file_symbol] = {}
+                                    object_file_weak_symbol_table[package_file_symbol]['reported_by'] = {}
+                                else:
+                                    #Do nothing, the symbol is already recorded before
+                                    pass
+
+                                #Check if the package file which reports the weak symbol is added before
+                                if package_file_path not in object_file_weak_symbol_table[package_file_symbol]['reported_by'].keys():
+                                    #If not, add the package file which reports the weak symbol and a list of files which have the same weak symbol
+                                    object_file_weak_symbol_table[package_file_symbol]['reported_by'][package_file_path] = {}
+                                    object_file_weak_symbol_table[package_file_symbol]['reported_by'][package_file_path]['duplicate_files'] = previous_weak_linked_symbols[package_file_symbol]
+                                else:
+                                    #If the report package file is already added before, do nothing to avoid overwriting
+                                    pass
 
                                 #Get file paths in list of linked static libs
                                 static_linked_lib_paths = [lib.get_path() for lib in static_linked_files]
@@ -332,9 +396,24 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                 object_file_path = object_file.get_path()
                                 if object_file_path not in static_linked_lib_paths:
                                     static_linked_files.append(object_file)
-                                
-                                #Go to next object file
-                                break
+                                else:
+                                    #Do nothing
+                                    pass
+        
+        #Refine weak symbol table of linked files
+        for static_linked_file in static_linked_files:
+            #Get weak symbol table
+            linked_file_weak_symbol_table = static_linked_file.get_weak_linked_symbols()
+
+            #For each duplicated symbol
+            for symbol_name in linked_file_weak_symbol_table.keys():
+                #Get the list of files which report this weak symbol
+                report_files = linked_file_weak_symbol_table[symbol_name]['reported_by']
+
+                #For each file which report this symbol
+                for report_file_name in report_files.keys():
+                    #Convert duplicate_files from real object into a list of file paths
+                    report_files[report_file_name]['duplicate_files'] = [file.get_path() for file in report_files[report_file_name]['duplicate_files'].values()]
 
         return static_linked_files
 
