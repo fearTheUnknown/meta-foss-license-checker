@@ -255,7 +255,7 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                     #If yes, for each object file in static lib
                     for object_file_name in static_lib_symbol_table.keys():
 
-                        is_weak_linking_found = False #Flag indicate that a weak symbol linking is found in the object file of the static lib under inspection
+                        is_next_lib = False #Flag indicate to iterate to next library
 
                         #Extract symbols of functions and data objects with type FUNC/OBJECT, bind WEAK, visibility dont care, location is not UND
                         object_file_symbols_for_comparison = {}
@@ -270,13 +270,13 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                             if package_file_symbol in object_file_symbols_for_comparison.keys():
 
                                 #If the linking status of the corresponding static lib is already set
-                                if static_lib.get_link_status() != '':
+                                if static_lib.get_link_status() == 'duplicate strong static' or static_lib.get_link_status() == 'strong static':
                                     #Do nothing, by pass this static lib, we know for sure that this file might have some kinds of "strong linking" already
-                                    is_weak_linking_found = True
+                                    is_next_lib = True
                                     break
                                 
-                                #else if the linking status of the corresponding static lib is not set
-                                elif static_lib.get_link_status() == '':
+                                #else if the linking status of the corresponding static lib is not set or already set before to weak
+                                elif static_lib.get_link_status() == '' or static_lib.get_link_status() == 'weak static':
                                     #Get weak symbol table
                                     static_lib_weak_symbol_table = static_lib.get_weak_linked_symbols()
 
@@ -318,14 +318,13 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                     static_lib_path = static_lib.get_path()
                                     if static_lib_path not in static_linked_lib_paths:
                                         static_linked_files.append(static_lib)
-
-                                    #Go to next static lib
-                                    is_weak_linking_found = True
-                                    break
+                                    else:
+                                        #Do nothing
+                                        pass
 
                         #If weak linking is found, break out to next static lib or object file.
                         #A single sign of weak linking in an object file is enough to conclude weak linking status of the static lib
-                        if is_weak_linking_found:
+                        if is_next_lib:
                             break
 
                 elif isinstance(recipe_sysroot_file, ObjectFile):
@@ -349,12 +348,12 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                         if package_file_symbol in object_file_symbols_for_comparison.keys():
 
                             #If the linking status of the corresponding statically linked file is already set
-                            if object_file.get_link_status() != '':
+                            if object_file.get_link_status() == 'duplicate strong static' or object_file.get_link_status() == 'strong static':
                                 #Do nothing, by pass this object file, we know for sure that this file might have some kinds of "strong linking" already
                                 break
                             
-                            #else if the linking status of the corresponding static lib is not set
-                            elif object_file.get_link_status() == '':
+                            #else if the linking status of the corresponding static lib is not set or already set before to weak
+                            elif object_file.get_link_status() == '' or object_file.get_link_status() == 'weak static':
 
                                 #Set linking status of the static lib to "weak static"
                                 object_file.set_link_status('weak static')
@@ -397,9 +396,9 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                 object_file_path = object_file.get_path()
                                 if object_file_path not in static_linked_lib_paths:
                                     static_linked_files.append(object_file)
-                                
-                                #Go to next object file
-                                break
+                                else:
+                                    #Do nothing
+                                    pass
         
         #Refine weak symbol table of linked files
         for static_linked_file in static_linked_files:
