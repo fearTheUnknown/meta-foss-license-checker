@@ -459,8 +459,6 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                     #For each object file in static lib
                     for object_file_name in static_lib_symbol_table.keys():
 
-                        is_strong_linking_found = False #Flag indicate that a strong symbol linking is found in the current object file under inspection
-
                         #Extract symbols of functions and data objects of the object file with type FUNC/OBJECT, bind not LOCAL, visibility dont care, location is not UND for comparison
                         object_file_symbols = {}
                         for symbol_name in static_lib_symbol_table[object_file_name].keys():
@@ -551,12 +549,6 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                     else:
                                         #Do nothing
                                         pass
-                                    
-                                    #Set the flag to indicate that strong linking is found
-                                    is_strong_linking_found = True
-
-                                    #Break out since there is no need to check for other symbols in symbols_to_compare
-                                    break
 
                                 #else if the matched symbol with object file is not WEAK and is not among previous strong linked symbols
                                 elif object_file_symbols[package_file_symbol]['bind'] != 'WEAK' and package_file_symbol not in previous_strong_linked_symbols.keys():
@@ -610,19 +602,9 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                         #Do nothing
                                         pass
                                     
-                                    #Set the flag to indicate that strong linking is found
-                                    is_strong_linking_found = True
-
-                                    #Break out since there is no need to check for other symbols in symbols_to_compare
-                                    break
                             else:
                                 #If there is no symbol match, do nothing
                                 pass
-                        
-
-                        #If strong linking is found, break the loop to avoid checking other object files in the static lib
-                        if is_strong_linking_found:
-                            break
 
                 #Check if the file in recipe-sysroot is an object file
                 elif isinstance(recipe_sysroot_file, ObjectFile):
@@ -723,9 +705,6 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                 else:
                                     #Do nothing
                                     pass
-                                
-                                #Break out since there is no need to check with other symbols of the package file
-                                break
 
                             #else if the matched symbol with the object file symbol is not WEAK and is not in previous_strong_linked_symbols
                             elif object_file_symbols_for_comparison[package_file_symbol]['bind'] != 'WEAK' and package_file_symbol not in previous_strong_linked_symbols.keys():
@@ -781,8 +760,6 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                     #Do nothing
                                     pass
 
-                                #Break out since there is no need to check for other symbols of the package file
-                                break
                 else:
                     #TODO: Handle other types of files, simply extract symbols of functions and variables of the file
                     pass
