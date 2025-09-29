@@ -459,8 +459,6 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                     #For each object file in static lib
                     for object_file_name in static_lib_symbol_table.keys():
 
-                        is_strong_linking_found = False #Flag indicate that a strong symbol linking is found in the current object file under inspection
-
                         #Extract symbols of functions and data objects of the object file with type FUNC/OBJECT, bind not LOCAL, visibility dont care, location is not UND for comparison
                         object_file_symbols = {}
                         for symbol_name in static_lib_symbol_table[object_file_name].keys():
@@ -476,35 +474,34 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                 #If the matched symbol with object file is WEAK
                                 if object_file_symbols[package_file_symbol]['bind'] == 'WEAK':
                                     #Ignore it, no strong linking can happen with a weak symbol of the object file , this case is going to be handle by other functions
-                                    #Continue with the next package_file_symbol
+                                    #Continue with the next symbol
                                     pass
 
                                 #else if the matched symbol is in the list of previous strong linked symbols. This means that the symbol is already found in some static libs or object files before
                                 elif package_file_symbol in previous_strong_linked_symbols.keys():
-                                    #Get list of duplicated strong symbols of the current static lib
-                                    static_lib_duplicate_symbol_table = static_lib.get_duplicate_linked_symbols()
+                                    #Get strong symbol table of the current static lib
+                                    static_lib_strong_symbol_table = static_lib.get_strong_linked_symbols()
 
                                     #Get file path of the package file
                                     package_file_path = package_file.get_path()
 
                                     #Set linking status of the current static lib to "duplicate strong static"
                                     static_lib.set_link_status('duplicate strong static')
-
                                     
-                                    #If the duplicate symbol is not recorded to duplicate symbols of the static lib before, record it now
-                                    if package_file_symbol not in static_lib_duplicate_symbol_table.keys():
-                                        #If not, add duplicate symbol to recipe_sysroot_file_duplicate_symbols
-                                        static_lib_duplicate_symbol_table[package_file_symbol] = {}
-                                        static_lib_duplicate_symbol_table[package_file_symbol]['reported_by'] = {}
+                                    #If the duplicate symbol is not recorded to strong symbol table of the static lib before, record it now
+                                    if package_file_symbol not in static_lib_strong_symbol_table.keys():
+                                        #Create placeholder for the new symbol
+                                        static_lib_strong_symbol_table[package_file_symbol] = {}
+                                        static_lib_strong_symbol_table[package_file_symbol]['reported_by'] = {}
                                     else:
                                         #Do nothing, the symbol is already recorded before
                                         pass
 
                                     #Check if the package file which reports the duplicate symbol is added before
-                                    if package_file_path not in static_lib_duplicate_symbol_table[package_file_symbol]['reported_by'].keys():
+                                    if package_file_path not in static_lib_strong_symbol_table[package_file_symbol]['reported_by'].keys():
                                         #If not, add the package file which reports the duplicate symbol and a list of files which have the same duplicate symbol
-                                        static_lib_duplicate_symbol_table[package_file_symbol]['reported_by'][package_file_path] = {}
-                                        static_lib_duplicate_symbol_table[package_file_symbol]['reported_by'][package_file_path]['duplicate_files'] = previous_strong_linked_symbols[package_file_symbol]
+                                        static_lib_strong_symbol_table[package_file_symbol]['reported_by'][package_file_path] = {}
+                                        static_lib_strong_symbol_table[package_file_symbol]['reported_by'][package_file_path]['duplicate_files'] = previous_strong_linked_symbols[package_file_symbol]
                                     else:
                                         #If the report package file is already added before, do nothing to avoid overwriting
                                         pass
@@ -515,23 +512,23 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                         #Set linking status of the linked file to "duplicate strong static"
                                         previous_recipe_sysroot_file.set_link_status('duplicate strong static')
 
-                                        #Get the duplicate symbols of the linked file
-                                        previous_recipe_sysroot_file_duplicate_symbol_table = previous_recipe_sysroot_file.get_duplicate_linked_symbols()
+                                        #Get the strong symbols of the previously linked file
+                                        previous_recipe_sysroot_file_strong_symbol_table = previous_recipe_sysroot_file.get_strong_linked_symbols()
 
-                                        #Check if the duplicate symbol is recorded to duplicate symbol table of the linked file
-                                        if package_file_symbol not in previous_recipe_sysroot_file_duplicate_symbol_table.keys():
-                                            #If not, add duplicate symbol to the duplicate symbol table of the linked file
-                                            previous_recipe_sysroot_file_duplicate_symbol_table[package_file_symbol] = {}
-                                            previous_recipe_sysroot_file_duplicate_symbol_table[package_file_symbol]['reported_by'] = {}
+                                        #Check if the duplicate symbol is recorded to strong symbol table of the linked file
+                                        if package_file_symbol not in previous_recipe_sysroot_file_strong_symbol_table.keys():
+                                            #If not, add duplicate symbol to the strong symbol table of the linked file
+                                            previous_recipe_sysroot_file_strong_symbol_table[package_file_symbol] = {}
+                                            previous_recipe_sysroot_file_strong_symbol_table[package_file_symbol]['reported_by'] = {}
                                         else:
                                             #Do nothing, the symbol is already recorded before
                                             pass
 
-                                        #Check if the package file which reports the duplicate symbol is added to the duplicate symbol table of the linked file
-                                        if package_file_path not in previous_recipe_sysroot_file_duplicate_symbol_table[package_file_symbol]['reported_by'].keys():
+                                        #Check if the package file which reports the duplicate symbol is added to the strong symbol table of the linked file
+                                        if package_file_path not in previous_recipe_sysroot_file_strong_symbol_table[package_file_symbol]['reported_by'].keys():
                                             #If not, add the package file which reports the duplicate symbol and a list of files which have the same duplicate symbol
-                                            previous_recipe_sysroot_file_duplicate_symbol_table[package_file_symbol]['reported_by'][package_file_path] = {}
-                                            previous_recipe_sysroot_file_duplicate_symbol_table[package_file_symbol]['reported_by'][package_file_path]['duplicate_files'] = previous_strong_linked_symbols[package_file_symbol]
+                                            previous_recipe_sysroot_file_strong_symbol_table[package_file_symbol]['reported_by'][package_file_path] = {}
+                                            previous_recipe_sysroot_file_strong_symbol_table[package_file_symbol]['reported_by'][package_file_path]['duplicate_files'] = previous_strong_linked_symbols[package_file_symbol]
                                         else:
                                             #If the report package file is already added before, do nothing to avoid overwriting
                                             pass
@@ -549,21 +546,49 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                     if static_lib_path not in static_linked_file_paths:
                                         #If yes, update the linked static lib to list of linked static files
                                         static_linked_files.append(static_lib)
-
-                                    #Set the flag to indicate that strong linking is found
-                                    is_strong_linking_found = True
-
-                                    #Break out since there is no need to check for other symbols in symbols_to_compare
-                                    break
+                                    else:
+                                        #Do nothing
+                                        pass
 
                                 #else if the matched symbol with object file is not WEAK and is not among previous strong linked symbols
                                 elif object_file_symbols[package_file_symbol]['bind'] != 'WEAK' and package_file_symbol not in previous_strong_linked_symbols.keys():
+                                    #Get list of strong symbol table of the current static lib
+                                    static_lib_strong_symbol_table = static_lib.get_strong_linked_symbols()
+
                                     #Set linking status of the static lib to "strong static"
                                     static_lib.set_link_status('strong static')
 
-                                    #Update the symbol to previous_strong_linked_symbols along with its reference to the corresponding static lib
+                                    #Update the symbol to list of previous strong symbols along with its reference to the corresponding static lib
                                     previous_strong_linked_symbols[package_file_symbol] = {}
                                     previous_strong_linked_symbols[package_file_symbol][static_lib.get_name()] = static_lib
+
+                                    #Get file path of the package file
+                                    package_file_path = package_file.get_path()
+
+                                    #Update the symbol to list of strong symbols along with its reference to the corresponding static lib
+                                    if package_file_symbol not in previous_strong_linked_symbols.keys():
+                                        previous_strong_linked_symbols[package_file_symbol] = {}
+                                        previous_strong_linked_symbols[package_file_symbol][static_lib.get_name()] = static_lib
+                                    else:
+                                        previous_strong_linked_symbols[package_file_symbol][static_lib.get_name()] = static_lib
+
+                                    #If the strong symbol is not recorded to strong symbol table before, record it now
+                                    if package_file_symbol not in static_lib_strong_symbol_table.keys():
+                                        #Create placeholder for the symbol
+                                        static_lib_strong_symbol_table[package_file_symbol] = {}
+                                        static_lib_strong_symbol_table[package_file_symbol]['reported_by'] = {}
+                                    else:
+                                        #Do nothing, the symbol is already recorded before
+                                        pass
+
+                                    #Check if the package file which reports the strong symbol is added before
+                                    if package_file_path not in static_lib_strong_symbol_table[package_file_symbol]['reported_by'].keys():
+                                        #If not, add the package file which reports the strong symbol and a list of files which have the same strong symbol
+                                        static_lib_strong_symbol_table[package_file_symbol]['reported_by'][package_file_path] = {}
+                                        static_lib_strong_symbol_table[package_file_symbol]['reported_by'][package_file_path]['duplicate_files'] = previous_strong_linked_symbols[package_file_symbol]
+                                    else:
+                                        #If the report package file is already added before, do nothing to avoid overwriting
+                                        pass
 
                                     #Get file paths of all linked static files
                                     static_linked_file_paths = [lib.get_path() for lib in static_linked_files]
@@ -573,20 +598,13 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                     if static_lib_path not in static_linked_file_paths:
                                         #If yes, update the linked static lib to list of linked static files
                                         static_linked_files.append(static_lib)
-
-                                    #Set the flag to indicate that strong linking is found
-                                    is_strong_linking_found = True
-
-                                    #Break out since there is no need to check for other symbols in symbols_to_compare
-                                    break
+                                    else:
+                                        #Do nothing
+                                        pass
+                                    
                             else:
                                 #If there is no symbol match, do nothing
                                 pass
-                        
-
-                        #If strong linking is found, break the loop to avoid checking other object files in the static lib
-                        if is_strong_linking_found:
-                            break
 
                 #Check if the file in recipe-sysroot is an object file
                 elif isinstance(recipe_sysroot_file, ObjectFile):
@@ -620,8 +638,8 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                 #Get the name of the object file
                                 object_file_name = object_file.get_name()
 
-                                #Get the duplicated symbol table of the object file
-                                object_file_duplicate_symbol_table = object_file.get_duplicate_linked_symbols()
+                                #Get the strong symbol table of the object file
+                                object_file_strong_symbol_table = object_file.get_strong_linked_symbols()
 
                                 #Get file path of the package file
                                 package_file_path = package_file.get_path()
@@ -629,20 +647,20 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                 #Set linking status of the current object file to "duplicate strong static"
                                 object_file.set_link_status('duplicate strong static')
                                 
-                                #Check if the duplicate symbol is recorded to duplicate symbol table of the object file before
-                                if package_file_symbol not in object_file_duplicate_symbol_table.keys():
-                                    #If not, record the duplicate symbol to duplicate symbol table of the object file
-                                    object_file_duplicate_symbol_table[package_file_symbol] = {}
-                                    object_file_duplicate_symbol_table[package_file_symbol]['reported_by'] = {}
+                                #Check if the duplicate symbol is recorded to strong symbol table of the object file before
+                                if package_file_symbol not in object_file_strong_symbol_table.keys():
+                                    #If not, record the duplicate symbol to strong symbol table of the object file
+                                    object_file_strong_symbol_table[package_file_symbol] = {}
+                                    object_file_strong_symbol_table[package_file_symbol]['reported_by'] = {}
                                 else:
                                     #Do nothing, the duplicate symbol is already recorded before
                                     pass
 
                                 #If the package file which reports the duplicate symbol of the object file is added before
-                                if package_file_path not in object_file_duplicate_symbol_table[package_file_symbol]['reported_by'].keys():
+                                if package_file_path not in object_file_strong_symbol_table[package_file_symbol]['reported_by'].keys():
                                     #If not, add the package file which reports the duplicate symbol and a list of previous linked files which share the same duplicate symbol
-                                    object_file_duplicate_symbol_table[package_file_symbol]['reported_by'][package_file_path] = {}
-                                    object_file_duplicate_symbol_table[package_file_symbol]['reported_by'][package_file_path]['duplicate_files'] = previous_strong_linked_symbols[package_file_symbol]
+                                    object_file_strong_symbol_table[package_file_symbol]['reported_by'][package_file_path] = {}
+                                    object_file_strong_symbol_table[package_file_symbol]['reported_by'][package_file_path]['duplicate_files'] = previous_strong_linked_symbols[package_file_symbol]
                                 else:
                                     #If the the package file is already added before, do nothing to avoid overwriting
                                     pass
@@ -653,23 +671,23 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                     #Set linking status of the previous linked file to "duplicate strong static"
                                     previous_recipe_sysroot_file.set_link_status('duplicate strong static')
 
-                                    #Get the duplicate symbol table of the previous linked file
-                                    previous_recipe_sysroot_file_duplicate_symbol_table = previous_recipe_sysroot_file.get_duplicate_linked_symbols()
+                                    #Get the strong symbol table of the previous linked file
+                                    previous_recipe_sysroot_file_strong_symbol_table = previous_recipe_sysroot_file.get_strong_linked_symbols()
 
-                                    #Check if the duplicate symbol is recorded to duplicate symbol table of the previous linked file
-                                    if package_file_symbol not in previous_recipe_sysroot_file_duplicate_symbol_table.keys():
-                                        #If not, add the duplicate symbol to duplicate symbol table of the previous linked file
-                                        previous_recipe_sysroot_file_duplicate_symbol_table[package_file_symbol] = {}
-                                        previous_recipe_sysroot_file_duplicate_symbol_table[package_file_symbol]['reported_by'] = {}
+                                    #Check if the duplicate symbol is recorded to strong symbol table of the previous linked file
+                                    if package_file_symbol not in previous_recipe_sysroot_file_strong_symbol_table.keys():
+                                        #If not, add the duplicate symbol to strong symbol table of the previous linked file
+                                        previous_recipe_sysroot_file_strong_symbol_table[package_file_symbol] = {}
+                                        previous_recipe_sysroot_file_strong_symbol_table[package_file_symbol]['reported_by'] = {}
                                     else:
                                         #Do nothing, the symbol is already recorded before
                                         pass
 
-                                    #Check if the package file which reports the duplicate symbol is added to the duplicate symbol table of the previous linked file
-                                    if package_file_path not in previous_recipe_sysroot_file_duplicate_symbol_table[package_file_symbol]['reported_by'].keys():
+                                    #Check if the package file which reports the duplicate symbol is added to the strong symbol table of the previous linked file
+                                    if package_file_path not in previous_recipe_sysroot_file_strong_symbol_table[package_file_symbol]['reported_by'].keys():
                                         #If not, add the package file which reports the duplicate symbol and a list of files which have the same duplicate symbol
-                                        previous_recipe_sysroot_file_duplicate_symbol_table[package_file_symbol]['reported_by'][package_file_path] = {}
-                                        previous_recipe_sysroot_file_duplicate_symbol_table[package_file_symbol]['reported_by'][package_file_path]['duplicate_files'] = previous_strong_linked_symbols[package_file_symbol]
+                                        previous_recipe_sysroot_file_strong_symbol_table[package_file_symbol]['reported_by'][package_file_path] = {}
+                                        previous_recipe_sysroot_file_strong_symbol_table[package_file_symbol]['reported_by'][package_file_path]['duplicate_files'] = previous_strong_linked_symbols[package_file_symbol]
                                     else:
                                         #If the report package file is already added before, do nothing to avoid overwriting
                                         pass
@@ -684,12 +702,14 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                 object_file_path = object_file.get_path()
                                 if object_file_path not in strong_static_linked_file_paths:
                                     static_linked_files.append(object_file)
-                                
-                                #Break out since there is no need to check with other symbols of the package file
-                                break
+                                else:
+                                    #Do nothing
+                                    pass
 
                             #else if the matched symbol with the object file symbol is not WEAK and is not in previous_strong_linked_symbols
                             elif object_file_symbols_for_comparison[package_file_symbol]['bind'] != 'WEAK' and package_file_symbol not in previous_strong_linked_symbols.keys():
+                                #Get list of strong symbol table of the current object file
+                                object_file_strong_symbol_table = object_file.get_strong_linked_symbols()
 
                                 #Get name of the object file
                                 object_file_name = object_file.get_name()
@@ -701,6 +721,34 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                 previous_strong_linked_symbols[package_file_symbol] = {}
                                 previous_strong_linked_symbols[package_file_symbol][object_file_name] = object_file
 
+                                #Get file path of the package file
+                                package_file_path = package_file.get_path()
+
+                                #Update the symbol to list of strong symbols along with its reference to the corresponding object file
+                                if package_file_symbol not in previous_strong_linked_symbols.keys():
+                                    previous_strong_linked_symbols[package_file_symbol] = {}
+                                    previous_strong_linked_symbols[package_file_symbol][object_file.get_name()] = object_file
+                                else:
+                                    previous_strong_linked_symbols[package_file_symbol][object_file.get_name()] = object_file
+
+                                #If the strong symbol is not recorded to strong symbol table before, record it now
+                                if package_file_symbol not in object_file_strong_symbol_table.keys():
+                                    #Create placeholder for the symbol
+                                    object_file_strong_symbol_table[package_file_symbol] = {}
+                                    object_file_strong_symbol_table[package_file_symbol]['reported_by'] = {}
+                                else:
+                                    #Do nothing, the symbol is already recorded before
+                                    pass
+
+                                #Check if the package file which reports the strong symbol is added before
+                                if package_file_path not in object_file_strong_symbol_table[package_file_symbol]['reported_by'].keys():
+                                    #If not, add the package file which reports the strong symbol and a list of files which have the same strong symbol
+                                    object_file_strong_symbol_table[package_file_symbol]['reported_by'][package_file_path] = {}
+                                    object_file_strong_symbol_table[package_file_symbol]['reported_by'][package_file_path]['duplicate_files'] = previous_strong_linked_symbols[package_file_symbol]
+                                else:
+                                    #If the report package file is already added before, do nothing to avoid overwriting
+                                    pass
+
                                 #Get list of all statically linked files with strong symbols
                                 strong_static_linked_file_paths = [file.get_path() for file in static_linked_files]
 
@@ -708,24 +756,23 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
                                 object_file_path = object_file.get_path()
                                 if object_file_path not in strong_static_linked_file_paths:
                                     static_linked_files.append(object_file)
+                                else:
+                                    #Do nothing
+                                    pass
 
-                                #Break out since there is no need to check for other symbols of the package file
-                                break
                 else:
                     #TODO: Handle other types of files, simply extract symbols of functions and variables of the file
                     pass
         
-        #Refine the duplicate symbols of strong static linked libs
-        duplicate_strong_static_linked_libs = [lib for lib in static_linked_files if lib.get_duplicate_linked_symbols() != {}]
-
-        for duplicate_strong_static_linked_lib in duplicate_strong_static_linked_libs:
-            #Get duplicated symbols
-            duplicated_symbols = duplicate_strong_static_linked_lib.get_duplicate_linked_symbols()
+        #Refine strong symbol table of linked files
+        for static_linked_file in static_linked_files:
+            #Get strong symbol table
+            linked_file_strong_symbol_table = static_linked_file.get_strong_linked_symbols()
 
             #For each duplicated symbol
-            for symbol_name in duplicated_symbols.keys():
-                #Get the list of files which report this duplicated symbol
-                report_files = duplicated_symbols[symbol_name]['reported_by']
+            for symbol_name in linked_file_strong_symbol_table.keys():
+                #Get the list of files which report this strong symbol
+                report_files = linked_file_strong_symbol_table[symbol_name]['reported_by']
 
                 #For each file which report this symbol
                 for report_file_name in report_files.keys():
