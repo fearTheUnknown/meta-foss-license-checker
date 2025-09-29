@@ -464,7 +464,7 @@ def convert_to_list_of_readable_object_files(file_paths=[], d=None):
             #Create shared lib object
             shared_lib = SharedLib(path=file_path, name=file_name, extension=file_extension,
                                    fromPackage='', fromRecipe='',
-                                   license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={}, checksum=checksum)
+                                   license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={}, checksum=checksum)
 
             #Add shared lib object to the list
             readable_object_file_list.append(shared_lib)
@@ -478,7 +478,7 @@ def convert_to_list_of_readable_object_files(file_paths=[], d=None):
             #Create executable object
             executable = Executable(path=file_path, name=file_name, extension=file_extension,
                                     fromPackage='', fromRecipe='',
-                                    license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={}, checksum=checksum)
+                                    license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={}, checksum=checksum)
 
             #Add file to the list
             readable_object_file_list.append(executable)
@@ -492,7 +492,7 @@ def convert_to_list_of_readable_object_files(file_paths=[], d=None):
             #Create object file object
             object_file = ObjectFile(path=file_path, name=file_name, extension=file_extension,
                                      fromPackage='', fromRecipe='',
-                                     license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={}, checksum=checksum)
+                                     license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={}, checksum=checksum)
 
             #Add object file object to the list
             readable_object_file_list.append(object_file)
@@ -506,7 +506,7 @@ def convert_to_list_of_readable_object_files(file_paths=[], d=None):
             #Create static lib object
             static_lib = StaticLib(path=file_path, name=file_name, extension=file_extension,
                                    fromPackage='', fromRecipe='',
-                                   license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={},duplicateLinkedSymbols={}, checksum=checksum)
+                                   license='', symbolTable=symbol_table, strongLinkedSymbols={},weakLinkedSymbols={}, checksum=checksum)
 
             #Add static lib object to the list
             readable_object_file_list.append(static_lib)
@@ -517,7 +517,7 @@ def convert_to_list_of_readable_object_files(file_paths=[], d=None):
             #Create header file
             header_file = HeaderFile(path=file_path, name=file_name, extension=file_extension,
                                      fromPackage='', fromRecipe='',
-                                     license='', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, duplicateLinkedSymbols={}, checksum=checksum)
+                                     license='', symbolTable={}, strongLinkedSymbols={}, weakLinkedSymbols={}, checksum=checksum)
             
             #Add header file to the list
             readable_object_file_list.append(header_file)
