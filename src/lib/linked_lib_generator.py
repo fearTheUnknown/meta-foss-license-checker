@@ -202,12 +202,18 @@ class StaticLinkedLibsGenerator(LinkedLibsGenerator):
 
         Returns:
             A list of potentially linked static libraries and linked header files
-        """        
+        """
+        #Get flag to check whether header file inclusion is enabled
+        is_header_inclusion_on = self.m_d.getVar("INCLUDE_HEADERS")
+
         #Create list of linked static libs
         linked_static_libs = self.__generate_list_of_statically_linked_libs(self.m_pkgfiles, self.m_d)
 
         #Create list of linked header files
-        linked_header_files = self.__generate_list_of_statically_linked_header_files(self.m_d)
+        if is_header_inclusion_on == "1":
+            linked_header_files = self.__generate_list_of_statically_linked_header_files(self.m_d)
+        else:
+            linked_header_files = []
 
         #Combine the two lists into a list of static linked files
         static_linked_files = linked_static_libs + linked_header_files
