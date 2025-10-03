@@ -25,8 +25,8 @@ class FossComplianceChecker:
 
         #License setting
         self.m_strong_copyleft_licenses = None
-        self.m_weak_copylef_licenses = None
-        self.m_non_copylef_licenses = None
+        self.m_weak_copyleft_licenses = None
+        self.m_non_copyleft_licenses = None
 
         #White list
         self.m_approved_files = None
@@ -76,8 +76,8 @@ class FossComplianceChecker:
         
         #Extract essential settings from foss configuration
         self.m_strong_copyleft_licenses = self.m_foss_config_object.get_strict_licenses()
-        self.m_weak_copylef_licenses = self.m_foss_config_object.get_half_strict_licenses()
-        self.m_non_copylef_licenses = self.m_foss_config_object.get_open_licenses()
+        self.m_weak_copyleft_licenses = self.m_foss_config_object.get_half_strict_licenses()
+        self.m_non_copyleft_licenses = self.m_foss_config_object.get_open_licenses()
 
         #Extract white list
         self.m_approved_files = self.m_recipe_config_object.get_approved_files()
@@ -203,7 +203,7 @@ class FossComplianceChecker:
                         self.m_recipe_config_object.add_message("Warning: File [%s] has strict license [%s] but linking status is unknown. Please help to check and add this file to approved list accordingly." % (file_to_be_checked.get_path(), file_license))
 
                 #Check if the file has half-strict license
-                elif file_license in self.m_weak_copylef_licenses:
+                elif file_license in self.m_weak_copyleft_licenses:
 
                     latest_file_to_be_checked = file_to_be_checked
 
@@ -252,7 +252,7 @@ class FossComplianceChecker:
                         self.m_recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] but linking status is unknown. Please help to check and add this file to approved list accordingly." % (file_to_be_checked.get_path(), file_license))
                 
                 #Check if the file has open license
-                elif file_license in self.m_non_copylef_licenses:
+                elif file_license in self.m_non_copyleft_licenses:
                     #Ignore file with open license, do not add to latest list of files to be checked
                     pass
 
@@ -327,7 +327,7 @@ class FossComplianceChecker:
                         self.m_recipe_config_object.add_file_to_be_checked(linked_file)
 
                 #Check if the file has half-strict license
-                elif file_license in self.m_weak_copylef_licenses:
+                elif file_license in self.m_weak_copyleft_licenses:
                     #Check if the file has linking status of "strong static", "duplicate strong static", "weak static" or file is a header file
                     if file_linking_status == "strong static":
                         self.m_recipe_config_object.add_message("Warning: File [%s] has half strict license [%s] with strong linking status [%s]. Please help to check and add this file to approved list accordingly." % (linked_file.get_path(), file_license, file_linking_status))
@@ -354,7 +354,7 @@ class FossComplianceChecker:
                         self.m_recipe_config_object.add_file_to_be_checked(linked_file)
 
                 #Check if the file has open license
-                elif file_license in self.m_non_copylef_licenses:
+                elif file_license in self.m_non_copyleft_licenses:
                     #Ignore the file, there is nothing to check
                     pass
                 

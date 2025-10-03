@@ -5,8 +5,8 @@ class FossConfig:
     """    
     def __init__(self):
         self.m_strong_copyleft_licenses = [] # Very strict with both static and dynamic linking
-        self.m_weak_copylef_licenses = [] # Strict with static linking, but not with dynamic linking
-        self.m_non_copylef_licenses = [] # No issues with any kinds of linking at all
+        self.m_weak_copyleft_licenses = [] # Strict with static linking, but not with dynamic linking
+        self.m_non_copyleft_licenses = [] # No issues with any kinds of linking at all
 
     def load_config_from_yaml_file(self, file_path):
         #Get file path of the config file
@@ -18,8 +18,8 @@ class FossConfig:
 
         #Extract the config data
         self.m_strong_copyleft_licenses = config_data.m_strong_copyleft_licenses
-        self.m_weak_copylef_licenses = config_data.m_weak_copylef_licenses
-        self.m_non_copylef_licenses = config_data.m_non_copylef_licenses
+        self.m_weak_copyleft_licenses = config_data.m_weak_copyleft_licenses
+        self.m_non_copyleft_licenses = config_data.m_non_copyleft_licenses
 
     def save_config_to_yaml_file(self, file_path):
         #Get file path of the config file
@@ -28,8 +28,8 @@ class FossConfig:
         #Pack data to be saved
         config_data = FossConfig()
         config_data.m_strong_copyleft_licenses = self.m_strong_copyleft_licenses
-        config_data.m_weak_copylef_licenses = self.m_weak_copylef_licenses
-        config_data.m_non_copylef_licenses = self.m_non_copylef_licenses
+        config_data.m_weak_copyleft_licenses = self.m_weak_copyleft_licenses
+        config_data.m_non_copyleft_licenses = self.m_non_copyleft_licenses
 
         #Write config to yaml file
         with open(config_file_path, 'w') as config_fd:
@@ -39,10 +39,10 @@ class FossConfig:
         return self.m_strong_copyleft_licenses
     
     def get_half_strict_licenses(self):
-        return self.m_weak_copylef_licenses
+        return self.m_weak_copyleft_licenses
     
     def get_open_licenses(self):
-        return self.m_non_copylef_licenses
+        return self.m_non_copyleft_licenses
 
 class RecipeConfig:
     """Class to create a recipe configuration in FOSS Compliance Check Algorithm
