@@ -51,6 +51,13 @@ class RecipeConfig:
         self.m_approved_files = []
         self.m_files_to_be_checked = []
         self.m_messages = []
+    
+    def __getstate__(self):
+        """Override the serializer to exclude serialization of "m_messages" attribute. Code copy from https://stackoverflow.com/questions/49905287/how-to-ignore-attributes-when-using-yaml-dump
+        """        
+        state = self.__dict__.copy()
+        del state['m_messages']
+        return state
 
     def load_config_from_yaml_file(self, file_path):
         #Get file path of the config file
